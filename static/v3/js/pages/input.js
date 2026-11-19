@@ -142,6 +142,19 @@ function setupDropzone() {
 
   if (!dropzone || !fileInput) return;
 
+  // Clicking dropzone card triggers native file input
+  dropzone.addEventListener('click', (e) => {
+    if (e.target.closest('button') || e.target.closest('label') || e.target.closest('input')) {
+      return;
+    }
+    fileInput.click();
+  });
+
+  // Reset fileInput value on click so selecting the same file triggers change event
+  fileInput.addEventListener('click', () => {
+    fileInput.value = '';
+  });
+
   // Window-level prevention to prevent Chrome from opening dropped files in a new tab
   window.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -166,17 +179,20 @@ function setupDropzone() {
     });
   });
 
-  ['dragleave', 'drop'].forEach((eventName) => {
-    dropzone.addEventListener(eventName, (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dropzone.style.borderColor = 'var(--border-2)';
-      dropzone.style.background = '';
-      dropzone.style.boxShadow = 'none';
-    });
+  dropzone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropzone.style.borderColor = 'var(--border-2)';
+    dropzone.style.background = '';
+    dropzone.style.boxShadow = 'none';
   });
 
   dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropzone.style.borderColor = 'var(--border-2)';
+    dropzone.style.background = '';
+    dropzone.style.boxShadow = 'none';
     const file = e.dataTransfer?.files?.[0];
     if (file) handleFile(file);
   });
@@ -195,34 +211,96 @@ function setupDropzone() {
   }
 
   function handleFile(file) {
+    if (!file) return;
     currentFileName = file.name;
     const sizeStr = fmt.bytes(file.size);
     if (fileLabel) fileLabel.textContent = `${file.name} (${sizeStr})`;
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onerror = () => {
+      window.dispatchEvent(
+        new CustomEvent('is:toast', {
+          detail: { message: `Failed to read file ${file.name}`, type: 'error' },
+        })
+      );
+    };
+    reader.onload = async (evt) => {
       const rawText = String(evt.target?.result || '').trim();
+      if (!rawText) {
+        window.dispatchEvent(
+          new CustomEvent('is:toast', {
+            detail: { message: `File ${file.name} is empty`, type: 'warn' },
+          })
+        );
+        return;
+      }
       if (textarea) textarea.value = rawText;
 
-      // Count records
+      // Count records intelligently across JSON, JSONL, and CSV
       let recordCount = 1;
+      let parsedObjects = null;
       try {
         const parsed = JSON.parse(rawText);
         if (Array.isArray(parsed)) {
           recordCount = parsed.length;
+          parsedObjects = parsed;
         } else if (parsed && typeof parsed === 'object') {
-          const recs = parsed.Records || parsed.records || parsed.events;
-          if (Array.isArray(recs)) recordCount = recs.length;
+          const recs = parsed.Records || parsed.records || parsed.events || parsed.items || parsed.data;
+          if (Array.isArray(recs)) {
+            recordCount = recs.length;
+            parsedObjects = recs;
+          } else {
+            recordCount = 1;
+            parsedObjects = [parsed];
+          }
         }
       } catch {
-        recordCount = rawText.split('\n').filter(Boolean).length || 1;
+        const lines = rawText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+        const jsonlList = [];
+        for (const line of lines) {
+          if (line.startsWith('{') && line.endsWith('}')) {
+            try {
+              jsonlList.push(JSON.parse(line));
+            } catch {
+              break;
+            }
+          } else {
+            break;
+          }
+        }
+        if (jsonlList.length > 0 && jsonlList.length === lines.length) {
+          recordCount = jsonlList.length;
+          parsedObjects = jsonlList;
+        } else if (rawText.includes(',') && lines.length > 1) {
+          recordCount = Math.max(1, lines.length - 1);
+        } else {
+          recordCount = lines.length || 1;
+        }
+      }
+
+      // If we parsed JSONL records into objects, update textarea with pretty JSON
+      if (parsedObjects && Array.isArray(parsedObjects) && (!rawText.startsWith('{') || rawText.includes('\n{'))) {
+        if (textarea) textarea.value = JSON.stringify({ records: parsedObjects }, null, 2);
       }
 
       // Update ready banner
       if (readyBanner && bannerTitle && bannerSub) {
         bannerTitle.textContent = file.name;
-        bannerSub.textContent = `${recordCount} records parsed (${sizeStr}) • Ready to scan`;
+        bannerSub.textContent = `${recordCount} records loaded (${sizeStr}) • Ready to scan`;
         readyBanner.style.display = 'flex';
+      }
+
+      // Persist to backend immediately
+      try {
+        await api.post('/inputs/upload', { content: rawText, source: 'auto', filename: file.name }).catch(() => {
+          return fetch('/api/inputs/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: rawText, source: 'auto', filename: file.name }),
+          });
+        });
+      } catch (err) {
+        console.warn('Backend upload notice:', err);
       }
 
       window.dispatchEvent(
@@ -462,18 +540,44 @@ function setupScanAction() {
 
     try {
       // 1. Persist to data/input/ so the 15-agent pipeline can inspect it
-      await fetch('/api/inputs/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: raw, source: 'auto', filename: currentFileName })
-      }).catch((e) => console.warn('Input upload log warning:', e));
+      try {
+        await api.post('/inputs/upload', { content: raw, source: 'auto', filename: currentFileName }).catch(() => {
+          return fetch('/api/inputs/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: raw, source: 'auto', filename: currentFileName })
+          });
+        });
+      } catch (e) {
+        console.warn('Input upload log notice:', e);
+      }
 
       // 2. Trigger detection scan across 15 autonomous agents
       let payload;
       try {
         payload = JSON.parse(raw);
       } catch {
-        payload = { raw_lines: raw.split('\n').filter(Boolean) };
+        const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+        const jsonlList = [];
+        let isJsonl = true;
+        for (const line of lines) {
+          if (line.startsWith('{') && line.endsWith('}')) {
+            try {
+              jsonlList.push(JSON.parse(line));
+            } catch {
+              isJsonl = false;
+              break;
+            }
+          } else {
+            isJsonl = false;
+            break;
+          }
+        }
+        if (isJsonl && jsonlList.length > 0) {
+          payload = { records: jsonlList, filename: currentFileName };
+        } else {
+          payload = { raw_text: raw, raw_lines: lines, filename: currentFileName };
+        }
       }
 
       const resp = await api.post('/inputs/scan', payload);

@@ -1063,6 +1063,52 @@ def run_status() -> dict[str, Any]:
     return get_run_status()
 
 
+@router.post("/inputs/upload")
+async def upload_inputs(
+    request: Request,
+    analyst: str = Depends(require_analyst_token),
+) -> dict[str, Any]:
+    """Upload raw logs (JSON, JSONL, CSV) into data/input/ for fleet scanning."""
+    try:
+        content_type = request.headers.get("content-type", "")
+        content = ""
+        source = "auto"
+        filename = "upload.json"
+
+        if "application/json" in content_type:
+            try:
+                body = await request.json()
+                if isinstance(body, dict):
+                    content = str(body.get("content") or "")
+                    source = str(body.get("source") or "auto")
+                    filename = str(body.get("filename") or "upload.json")
+            except Exception:
+                raw_bytes = await request.body()
+                content = raw_bytes.decode("utf-8", errors="replace")
+        elif "multipart/form-data" in content_type:
+            form = await request.form()
+            file = form.get("file")
+            if file and hasattr(file, "read"):
+                file_bytes = await file.read()
+                content = file_bytes.decode("utf-8", errors="replace")
+                filename = getattr(file, "filename", "upload.json")
+            source = str(form.get("source") or "auto")
+        else:
+            raw_bytes = await request.body()
+            content = raw_bytes.decode("utf-8", errors="replace")
+
+        if not content:
+            raise HTTPException(status_code=400, detail="No log content provided in upload")
+
+        from app import inputs
+        return inputs.save_input(content, source, filename)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Upload inputs failed")
+        raise HTTPException(status_code=422, detail=f"Upload failed: {exc}") from exc
+
+
 @router.post("/inputs/scan")
 async def scan_inputs(
     request: Request,
@@ -1073,17 +1119,31 @@ async def scan_inputs(
         raw_body = await request.body()
         scan_paths: list[Path] = []
         if raw_body and len(raw_body.strip()) > 0:
+            decoded = raw_body.decode("utf-8", errors="replace")
             try:
-                body_json = json.loads(raw_body.decode("utf-8"))
+                body_json = json.loads(decoded)
             except Exception:
                 body_json = None
 
+            input_dir = config.ROOT_DIR / "data" / "input"
+            input_dir.mkdir(parents=True, exist_ok=True)
+            stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%f")
+
             if body_json is not None:
-                input_dir = config.ROOT_DIR / "data" / "input"
-                input_dir.mkdir(parents=True, exist_ok=True)
-                stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%f")
-                scan_file = input_dir / f"scan_{stamp}.json"
-                scan_file.write_text(json.dumps(body_json, indent=2), encoding="utf-8")
+                if isinstance(body_json, dict) and "raw_text" in body_json and isinstance(body_json["raw_text"], str):
+                    raw_content = body_json["raw_text"]
+                    fname = str(body_json.get("filename") or "")
+                    ext = "csv" if fname.endswith(".csv") or ("," in raw_content and "\n" in raw_content and not raw_content.strip().startswith("{")) else "jsonl"
+                    scan_file = input_dir / f"scan_{stamp}.{ext}"
+                    scan_file.write_text(raw_content, encoding="utf-8")
+                else:
+                    scan_file = input_dir / f"scan_{stamp}.json"
+                    scan_file.write_text(json.dumps(body_json, indent=2), encoding="utf-8")
+                scan_paths.append(scan_file)
+            else:
+                ext = "csv" if "," in decoded and "\n" in decoded and not decoded.strip().startswith("{") else "jsonl"
+                scan_file = input_dir / f"scan_{stamp}.{ext}"
+                scan_file.write_text(decoded, encoding="utf-8")
                 scan_paths.append(scan_file)
 
         if scan_paths:

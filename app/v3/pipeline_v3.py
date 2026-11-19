@@ -141,8 +141,21 @@ def _load_records_from_file(file_path: Path) -> tuple[list[dict[str, Any]], list
 
     parsed_items: list[dict[str, Any]] = []
 
+    # Check if CSV
+    is_csv = file_path.suffix.lower() == ".csv" or ("," in content and "\n" in content and not content.startswith(("[", "{")))
+    if is_csv:
+        import csv
+        import io
+        try:
+            reader = csv.DictReader(io.StringIO(content))
+            for row in reader:
+                if row:
+                    parsed_items.append(dict(row))
+        except Exception as exc:  # noqa: BLE001
+            log.warning("Failed to parse CSV file %s: %s", file_path, exc)
+
     # Check if JSON Lines
-    if file_path.suffix == ".jsonl" or ("\n" in content and not content.startswith(("[", "{"))):
+    elif file_path.suffix.lower() in (".jsonl", ".log") or ("\n" in content and not content.startswith(("[", "{"))):
         for line in content.splitlines():
             line = line.strip()
             if not line:
@@ -160,6 +173,29 @@ def _load_records_from_file(file_path: Path) -> tuple[list[dict[str, Any]], list
                 for k in ("Records", "records", "events", "Events", "items", "data"):
                     if k in raw_data and isinstance(raw_data[k], list):
                         parsed_items.extend(raw_data[k])
+                if "raw_lines" in raw_data and isinstance(raw_data["raw_lines"], list):
+                    for line in raw_data["raw_lines"]:
+                        line_str = str(line).strip()
+                        if not line_str:
+                            continue
+                        try:
+                            line_item = json.loads(line_str)
+                            if isinstance(line_item, dict):
+                                parsed_items.append(line_item)
+                        except Exception:
+                            pass
+                if "raw_text" in raw_data and isinstance(raw_data["raw_text"], str):
+                    text_lines = raw_data["raw_text"].strip().splitlines()
+                    for line in text_lines:
+                        line_str = line.strip()
+                        if not line_str:
+                            continue
+                        try:
+                            line_item = json.loads(line_str)
+                            if isinstance(line_item, dict):
+                                parsed_items.append(line_item)
+                        except Exception:
+                            pass
                 if "okta" in raw_data and isinstance(raw_data["okta"], list):
                     okta_records.extend(raw_data["okta"])
                 if "cloudtrail" in raw_data and isinstance(raw_data["cloudtrail"], list):
@@ -244,6 +280,8 @@ def run_dataset(
         if input_dir.is_dir():
             file_paths.extend(input_dir.glob("**/*.json"))
             file_paths.extend(input_dir.glob("**/*.jsonl"))
+            file_paths.extend(input_dir.glob("**/*.csv"))
+            file_paths.extend(input_dir.glob("**/*.log"))
         if not file_paths:
             # Graceful fallback to sample dataset if data/input/ is currently empty
             sample_dir = config.ROOT_DIR / "data" / "sample"

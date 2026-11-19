@@ -6,6 +6,8 @@ from pathlib import Path
 
 log = logging.getLogger("identityshield.lock")
 
+_held_locks: set[Path] = set()
+
 
 class ProcessLock:
     """Exclusive lock protecting the in-memory bus against multi-worker split-brain."""
@@ -30,6 +32,12 @@ class ProcessLock:
                 return False
         except ValueError:
             pass
+
+        resolved = self.lock_path.resolve()
+        if resolved in _held_locks:
+            self.acquired = False
+            self.holder_pid = os.getpid()
+            return False
 
         self.lock_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -57,6 +65,7 @@ class ProcessLock:
                 fcntl.flock(self.file_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
 
             # Acquired successfully -> record current PID
+            _held_locks.add(resolved)
             self.acquired = True
             self.holder_pid = os.getpid()
             try:
@@ -110,6 +119,7 @@ class ProcessLock:
         except Exception:
             pass
 
+        _held_locks.discard(self.lock_path.resolve())
         self.file_handle = None
         self.acquired = False
         try:

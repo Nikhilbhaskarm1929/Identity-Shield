@@ -348,7 +348,7 @@ def run_dataset(
 
     duration_ms = round((time.monotonic() - start_time) * 1000.0, 2)
 
-    # 6. Gather counts from v3 SQLite store
+    # 6. Gather counts and newest findings from v3 SQLite store
     signals_count = _count("signals_v3")
     cases_count = _count("cases_v3")
     actions_count = _count("actions_v3")
@@ -358,19 +358,92 @@ def run_dataset(
     new_cases = max(0, cases_count - cases_before)
     new_actions = max(0, actions_count - actions_before)
 
+    # Resolve risk score, verdict, and anomaly summary from real agent analysis
+    top_case: dict[str, Any] | None = None
+    top_signals: list[dict[str, Any]] = []
+    risk_score: float = 12.0
+    risk_band: str = "allow"
+    verdict: str = "benign"
+    anomaly_summary: str = "No anomalous activity detected. All events align with benign baselines."
+    action_enforced: str = "ALLOW (PASS)"
+
+    if new_cases > 0:
+        try:
+            top_row = store.fetch_one(
+                "SELECT case_id, identity_id, session_risk, band, status, reasons, narrative "
+                "FROM cases_v3 ORDER BY created_at DESC LIMIT 1",
+                db_path=active_db,
+            )
+            if top_row:
+                top_case = dict(top_row)
+                risk_score = round(float(top_case.get("session_risk", 85.0)), 1)
+                risk_band = str(top_case.get("band", "high")).lower()
+                verdict = "threat_detected"
+                action_enforced = f"{risk_band.upper()} ENFORCED"
+
+                reasons_raw = top_case.get("reasons") or "[]"
+                reason_txt = ""
+                try:
+                    reasons_list = json.loads(reasons_raw) if isinstance(reasons_raw, str) else reasons_raw
+                    if reasons_list and isinstance(reasons_list[0], dict) and "text" in reasons_list[0]:
+                        reason_txt = reasons_list[0]["text"]
+                    elif reasons_list and isinstance(reasons_list[0], str):
+                        reason_txt = reasons_list[0]
+                except Exception:
+                    reason_txt = ""
+
+                ident = top_case.get("identity_id", "principal")
+                if reason_txt:
+                    anomaly_summary = f"{reason_txt} (Principal: {ident})"
+                elif top_case.get("narrative"):
+                    anomaly_summary = str(top_case["narrative"])[:180]
+                else:
+                    anomaly_summary = f"High-risk anomaly chain detected for principal {ident}."
+        except Exception as exc:  # noqa: BLE001
+            log.warning("Failed to fetch top case: %s", exc)
+
+    elif new_signals > 0:
+        verdict = "threat_detected"
+        risk_score = min(84.0, round(50.0 + (new_signals * 8.5), 1))
+        risk_band = "medium"
+        action_enforced = "CHALLENGE / STEP-UP"
+        try:
+            sig_rows = store.fetch_all(
+                "SELECT signal_id, detection_id, identity_id, summary, strength "
+                "FROM signals_v3 ORDER BY created_at DESC LIMIT 5",
+                db_path=active_db,
+            )
+            if sig_rows:
+                top_signals = [dict(s) for s in sig_rows]
+                first_sig = top_signals[0]
+                anomaly_summary = f"{first_sig.get('summary', 'Suspicious activity detected')} (Detection: {first_sig.get('detection_id')})"
+        except Exception as exc:  # noqa: BLE001
+            log.warning("Failed to fetch top signals: %s", exc)
+
     health_list = sup.get_health()
     per_agent = {h["agent_id"]: h for h in health_list}
 
+    run_signals = new_signals if events_replayed > 0 else (signals_count if input_only else 0)
+    run_cases = new_cases if events_replayed > 0 else (cases_count if input_only else 0)
+    run_actions = new_actions if events_replayed > 0 else (actions_count if input_only else 0)
+
     summary = {
         "status": "completed",
+        "verdict": verdict,
+        "risk_score": risk_score,
+        "risk_band": risk_band,
+        "anomaly_summary": anomaly_summary,
+        "action_enforced": action_enforced,
+        "top_case": top_case,
+        "top_signals": top_signals,
         "events": events_replayed or events_stored,
         "events_count": events_replayed,
-        "signals": new_signals if (events_replayed > 0 and new_signals > 0) else signals_count,
-        "signals_count": new_signals if (events_replayed > 0 and new_signals > 0) else signals_count,
-        "cases": new_cases if (events_replayed > 0 and new_cases > 0) else cases_count,
-        "cases_count": new_cases if (events_replayed > 0 and new_cases > 0) else cases_count,
-        "actions": new_actions if (events_replayed > 0 and new_actions > 0) else actions_count,
-        "actions_count": new_actions if (events_replayed > 0 and new_actions > 0) else actions_count,
+        "signals": run_signals,
+        "signals_count": run_signals,
+        "cases": run_cases,
+        "cases_count": run_cases,
+        "actions": run_actions,
+        "actions_count": run_actions,
         "duration_ms": duration_ms,
         "pace": pace,
         "per_agent": per_agent,

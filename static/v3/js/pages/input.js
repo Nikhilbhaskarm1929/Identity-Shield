@@ -132,6 +132,7 @@ export async function initInputPage() {
 function setupDropzone() {
   const dropzone = document.getElementById('upload-dropzone');
   const fileInput = document.getElementById('file-upload-input');
+  const chooseBtn = document.getElementById('btn-choose-file');
   const fileLabel = document.getElementById('file-name-label');
   const readyBanner = document.getElementById('file-ready-banner');
   const bannerTitle = document.getElementById('banner-file-title');
@@ -142,9 +143,17 @@ function setupDropzone() {
 
   if (!dropzone || !fileInput) return;
 
+  if (chooseBtn) {
+    chooseBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      fileInput.click();
+    });
+  }
+
   // Clicking dropzone card triggers native file input
   dropzone.addEventListener('click', (e) => {
-    if (e.target.closest('button') || e.target.closest('label') || e.target.closest('input')) {
+    if (e.target.closest('button') || e.target.closest('input')) {
       return;
     }
     fileInput.click();
@@ -651,26 +660,47 @@ async function runPipelineStages(progressBar, statusBadge) {
 }
 
 function renderScanResults(container, resp) {
-  const eventsCount = resp.events_count ?? resp.events ?? resp.events_processed ?? 18;
-  const signalsCount = resp.signals_count ?? resp.signals ?? resp.findings_count ?? 8;
-  const casesCount = resp.cases_count ?? resp.cases ?? 1;
-  const actionsCount = resp.actions_count ?? resp.actions ?? 2;
+  const eventsCount = resp.events_count ?? resp.events ?? resp.events_processed ?? 0;
+  const signalsCount = resp.signals_count ?? resp.signals ?? resp.findings_count ?? 0;
+  const casesCount = resp.cases_count ?? resp.cases ?? 0;
+  const actionsCount = resp.actions_count ?? resp.actions ?? 0;
   const durationMs = resp.duration_ms ? `${Math.round(resp.duration_ms)} ms` : '< 75 ms';
 
-  const isThreat = signalsCount > 0 || (resp.status && resp.status !== 'benign');
-  const riskScore = isThreat ? 94.2 : 14.0;
+  // Determine threat vs benign cleanly from actual signals / cases / verdict
+  const isThreat = Boolean(resp.verdict === 'threat_detected' || casesCount > 0 || signalsCount > 0);
+
+  // Real risk score from backend or calibrated based on signals
+  let riskScore = 12.0;
+  if (typeof resp.risk_score === 'number') {
+    riskScore = resp.risk_score;
+  } else if (isThreat) {
+    riskScore = casesCount > 0 ? 88.5 : Math.min(84.0, Math.round(50.0 + signalsCount * 8.5));
+  } else {
+    riskScore = 12.0;
+  }
+
+  const band = (resp.risk_band || (isThreat ? 'high' : 'low')).toLowerCase();
+  const actionText = resp.action_enforced || (isThreat ? `${band.toUpperCase()} ENFORCED` : 'STATUS: PASS');
+  const anomalyText = resp.anomaly_summary || (isThreat
+    ? 'Suspicious threat activity identified across identity sessions.'
+    : 'No anomalous activity detected. All events align with benign baselines.');
+
+  const topCase = resp.top_case;
+  const caseId = topCase?.case_id;
+  const caseLink = caseId ? `/v3/case.html?id=${encodeURIComponent(caseId)}` : '/v3/cases.html';
+  const caseLabel = caseId ? `🚨 View Case ${escHtml(caseId)} →` : '🚨 View in Threat Cases →';
 
   container.innerHTML = `
     <div class="card ${isThreat ? 'card--danger' : ''}" style="padding:22px; display:flex; flex-direction:column; gap:16px; border:1px solid ${isThreat ? 'var(--red-500)' : 'var(--green-500)'}; box-shadow:0 0 24px ${isThreat ? 'rgba(255, 82, 82, 0.2)' : 'rgba(0, 230, 118, 0.2)'};">
       <div class="card__head" style="margin-bottom:0;">
         <div>
           <div class="mono ${isThreat ? 'text-danger' : 'accent'}" style="font-size:11px; text-transform:uppercase; font-weight:700; letter-spacing:0.05em;">
-            ${isThreat ? '🚨 HIGH RISK ATTACK DETECTED' : '✅ BENIGN VERDICT'}
+            ${isThreat ? `🚨 ATTACK DETECTED (BAND: ${band.toUpperCase()})` : '✅ BENIGN VERDICT'}
           </div>
           <h3 class="card__title" style="font-size:18px; margin-top:2px;">Scan Pipeline Execution Results</h3>
         </div>
         <span class="badge ${isThreat ? 'high' : 'low'} mono" style="font-size:12px; padding:6px 14px;">
-          ${isThreat ? 'ACTION: RESTRICT ENFORCED' : 'STATUS: PASS'}
+          ${escHtml(actionText)}
         </span>
       </div>
 
@@ -693,16 +723,18 @@ function renderScanResults(container, resp) {
         </div>
       </div>
 
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:12px; background:rgba(255, 82, 82, 0.08); border-radius:var(--radius-sm); border:1px solid rgba(255, 82, 82, 0.25);">
-        <div class="mono" style="font-size:12px; color:var(--text-1);">
-          <strong>Key Anomaly Detected:</strong> SAML Role Escalation &amp; CloudTrail Tampering by principal <span class="accent">svc-report</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:12px; background:${isThreat ? 'rgba(255, 82, 82, 0.08)' : 'rgba(0, 230, 118, 0.08)'}; border-radius:var(--radius-sm); border:1px solid ${isThreat ? 'rgba(255, 82, 82, 0.25)' : 'rgba(0, 230, 118, 0.25)'};">
+        <div class="mono" style="font-size:12px; color:var(--text-1); max-width:850px; line-height:1.5;">
+          <strong>Key Anomaly Detected:</strong> ${escHtml(anomalyText)}
         </div>
         <div style="display:flex; gap:10px;">
-          <a href="/v3/cases.html" class="btn btn--danger" style="font-size:12px; padding:8px 18px; text-decoration:none;">
-            🚨 View in Threat Cases &rarr;
-          </a>
+          ${isThreat ? `
+            <a href="${caseLink}" class="btn btn--danger" style="font-size:12px; padding:8px 18px; text-decoration:none;">
+              ${caseLabel}
+            </a>
+          ` : ''}
           <a href="/v3/index.html" class="btn btn--primary" style="font-size:12px; padding:8px 18px; text-decoration:none;">
-            📊 View Live Dashboard &rarr;
+            📊 View Live Dashboard →
           </a>
         </div>
       </div>

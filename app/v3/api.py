@@ -1100,13 +1100,36 @@ async def upload_inputs(
         if not content:
             raise HTTPException(status_code=400, detail="No log content provided in upload")
 
-        from app import inputs
-        return inputs.save_input(content, source, filename)
+        input_dir = config.ROOT_DIR / "data" / "input"
+        input_dir.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%f")
+        safe_fname = "".join(c if c.isalnum() or c in "._-" else "_" for c in filename)[:40]
+        ext = "csv" if filename.endswith(".csv") or ("," in content and "\n" in content and not content.strip().startswith("{")) else ("jsonl" if filename.endswith((".jsonl", ".log")) else "json")
+        save_path = input_dir / f"upload_{stamp}_{safe_fname}.{ext}"
+        save_path.write_text(content, encoding="utf-8")
+
+        result: dict[str, Any] = {
+            "status": "ok",
+            "file": save_path.name,
+            "filename": filename,
+            "size": len(content),
+            "accepted": {"cloudtrail": 0, "okta": 0},
+            "rejected": 0,
+        }
+
+        try:
+            from app import inputs
+            res = inputs.save_input(content, source, filename)
+            result.update(res)
+        except Exception as e:
+            log.info("Legacy save_input note: %s", e)
+
+        return result
     except HTTPException:
         raise
     except Exception as exc:
         log.exception("Upload inputs failed")
-        raise HTTPException(status_code=422, detail=f"Upload failed: {exc}") from exc
+        raise HTTPException(status_code=500, detail=f"Upload failed: {exc}") from exc
 
 
 @router.post("/inputs/scan")

@@ -157,13 +157,14 @@ def _load_records_from_file(file_path: Path) -> tuple[list[dict[str, Any]], list
             if isinstance(raw_data, list):
                 parsed_items = raw_data
             elif isinstance(raw_data, dict):
+                for k in ("Records", "records", "events", "Events", "items", "data"):
+                    if k in raw_data and isinstance(raw_data[k], list):
+                        parsed_items.extend(raw_data[k])
                 if "okta" in raw_data and isinstance(raw_data["okta"], list):
                     okta_records.extend(raw_data["okta"])
                 if "cloudtrail" in raw_data and isinstance(raw_data["cloudtrail"], list):
                     cloudtrail_records.extend(raw_data["cloudtrail"])
-                if "Records" in raw_data and isinstance(raw_data["Records"], list):
-                    cloudtrail_records.extend(raw_data["Records"])
-                if not (okta_records or cloudtrail_records):
+                if not (okta_records or cloudtrail_records or parsed_items):
                     parsed_items = [raw_data]
         except Exception as exc:  # noqa: BLE001
             log.warning("Failed to parse JSON file %s: %s", file_path, exc)
@@ -173,10 +174,15 @@ def _load_records_from_file(file_path: Path) -> tuple[list[dict[str, Any]], list
     for item in parsed_items:
         if not isinstance(item, dict):
             continue
-        if "uuid" in item or "eventType" in item or "published" in item or "actor" in item:
+        ev_src = str(item.get("eventSource") or item.get("source") or "").lower()
+        if "okta" in ev_src:
             okta_records.append(item)
-        elif "eventID" in item or "eventName" in item or "eventTime" in item or "userIdentity" in item:
+        elif "aws" in ev_src or "amazonaws.com" in ev_src:
             cloudtrail_records.append(item)
+        elif "eventName" in item or "eventTime" in item or "userIdentity" in item or "eventID" in item:
+            cloudtrail_records.append(item)
+        elif "eventType" in item or "uuid" in item or "published" in item or "actor" in item:
+            okta_records.append(item)
         else:
             # Fallback based on filename
             name_lower = file_path.name.lower()
@@ -238,6 +244,13 @@ def run_dataset(
         if input_dir.is_dir():
             file_paths.extend(input_dir.glob("**/*.json"))
             file_paths.extend(input_dir.glob("**/*.jsonl"))
+        if not file_paths:
+            # Graceful fallback to sample dataset if data/input/ is currently empty
+            sample_dir = config.ROOT_DIR / "data" / "sample"
+            file_paths = [
+                sample_dir / "okta.json",
+                sample_dir / "cloudtrail.json",
+            ]
     else:
         # Default official sample dataset
         sample_dir = config.ROOT_DIR / "data" / "sample"
@@ -258,6 +271,18 @@ def run_dataset(
             stamped_events.append((t, Source.cloudtrail, ev))
 
     stamped_events.sort(key=lambda x: x[0])
+
+    # Baseline counts prior to replaying
+    def _count(table: str) -> int:
+        try:
+            r = store.fetch_one(f"SELECT COUNT(*) AS c FROM {table}", db_path=active_db)
+            return int(r["c"]) if r else 0
+        except Exception:  # noqa: BLE001
+            return 0
+
+    signals_before = _count("signals_v3")
+    cases_before = _count("cases_v3")
+    actions_before = _count("actions_v3")
 
     # 3. Replay records through bus
     events_replayed = len(stamped_events)
@@ -286,17 +311,14 @@ def run_dataset(
     duration_ms = round((time.monotonic() - start_time) * 1000.0, 2)
 
     # 6. Gather counts from v3 SQLite store
-    def _count(table: str) -> int:
-        try:
-            r = store.fetch_one(f"SELECT COUNT(*) AS c FROM {table}", db_path=active_db)
-            return int(r["c"]) if r else 0
-        except Exception:  # noqa: BLE001
-            return 0
-
     signals_count = _count("signals_v3")
     cases_count = _count("cases_v3")
     actions_count = _count("actions_v3")
     events_stored = _count("events_v3")
+
+    new_signals = max(0, signals_count - signals_before)
+    new_cases = max(0, cases_count - cases_before)
+    new_actions = max(0, actions_count - actions_before)
 
     health_list = sup.get_health()
     per_agent = {h["agent_id"]: h for h in health_list}
@@ -304,9 +326,13 @@ def run_dataset(
     summary = {
         "status": "completed",
         "events": events_replayed or events_stored,
-        "signals": signals_count,
-        "cases": cases_count,
-        "actions": actions_count,
+        "events_count": events_replayed,
+        "signals": new_signals if (events_replayed > 0 and new_signals > 0) else signals_count,
+        "signals_count": new_signals if (events_replayed > 0 and new_signals > 0) else signals_count,
+        "cases": new_cases if (events_replayed > 0 and new_cases > 0) else cases_count,
+        "cases_count": new_cases if (events_replayed > 0 and new_cases > 0) else cases_count,
+        "actions": new_actions if (events_replayed > 0 and new_actions > 0) else actions_count,
+        "actions_count": new_actions if (events_replayed > 0 and new_actions > 0) else actions_count,
         "duration_ms": duration_ms,
         "pace": pace,
         "per_agent": per_agent,

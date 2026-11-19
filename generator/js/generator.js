@@ -7,21 +7,37 @@
 (function (window) {
   'use strict';
 
+  // Clean and normalize target URL (strips trailing paths if user typed full endpoint)
+  function sanitizeTargetUrl(url) {
+    if (!url) return '';
+    let clean = url.trim().replace(/\/+$/, '');
+    clean = clean.replace(/\/(ingest\/v1\/(events|health)|v1\/(events|health)|ingest|events|health)$/i, '');
+    return clean.replace(/\/+$/, '');
+  }
+
   // In-memory runtime state
   const detectedTargetUrl = (() => {
     try {
       const h = window.location.hostname;
-      if (h && h !== 'localhost' && h !== '127.0.0.1' && h !== '') {
-        return `${window.location.protocol}//${h}:8001`;
+      const p = window.location.port;
+      const proto = window.location.protocol;
+      if (proto && (proto === 'http:' || proto === 'https:') && h) {
+        if (p === '8000' || p === '80' || p === '443' || !p || h.endsWith('.onrender.com') || h.endsWith('.ngrok-free.app')) {
+          return `${proto}//${window.location.host}`;
+        }
+        if (p === '8001') {
+          return `${proto}//${window.location.host}`;
+        }
+        return `${proto}//${h}:8000`;
       }
     } catch {
       // ignore
     }
-    return 'http://127.0.0.1:8001';
+    return 'http://127.0.0.1:8000';
   })();
 
   const state = {
-    targetUrl: detectedTargetUrl,
+    targetUrl: sanitizeTargetUrl(detectedTargetUrl),
     keyId: 'test-key-1',
     secret: 'test_super_secret_signing_key_32bytes_long!',
     senderId: 'laptop-2-generator',
@@ -78,7 +94,7 @@
 
     if (urlInput) {
       urlInput.value = state.targetUrl;
-      urlInput.addEventListener('input', e => { state.targetUrl = e.target.value.trim().replace(/\/+$/, ''); });
+      urlInput.addEventListener('input', e => { state.targetUrl = sanitizeTargetUrl(e.target.value); });
     }
     if (keyInput) {
       keyInput.value = state.keyId;
@@ -133,16 +149,28 @@
 
     const startTime = performance.now();
     try {
-      const resp = await fetch(`${state.targetUrl}/ingest/v1/health`, {
+      state.targetUrl = sanitizeTargetUrl(state.targetUrl);
+      const urlInput = $('targetUrl');
+      if (urlInput && urlInput.value !== state.targetUrl) {
+        urlInput.value = state.targetUrl;
+      }
+
+      let resp = await fetch(`${state.targetUrl}/ingest/v1/health`, {
         method: 'GET',
-        headers: {
-          'ngrok-skip-browser-warning': 'true'
-        }
-      });
+        headers: { 'ngrok-skip-browser-warning': 'true' }
+      }).catch(() => null);
+
+      if (!resp || !resp.ok) {
+        resp = await fetch(`${state.targetUrl}/v1/health`, {
+          method: 'GET',
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        }).catch(() => null);
+      }
+
       const latency = Math.round(performance.now() - startTime);
 
-      if (resp.ok) {
-        const data = await resp.json();
+      if (resp && resp.ok) {
+        const data = await resp.json().catch(() => ({ status: 'ok' }));
         if (connPill) connPill.className = 'conn-pill connected';
         if (connText) connText.textContent = `Online (${latency}ms)`;
         addLogEntry({
@@ -155,7 +183,7 @@
           response: data
         });
       } else {
-        throw new Error(`HTTP ${resp.status}`);
+        throw new Error(resp ? `HTTP ${resp.status}` : 'Connection refused / offline');
       }
     } catch (err) {
       if (connPill) connPill.className = 'conn-pill';
@@ -553,11 +581,20 @@ ${JSON.stringify(currentBatch, null, 2)}
     let respData = null;
 
     try {
-      const resp = await fetch(`${state.targetUrl}/ingest/v1/events`, {
+      state.targetUrl = sanitizeTargetUrl(state.targetUrl);
+      let resp = await fetch(`${state.targetUrl}/ingest/v1/events`, {
         method: 'POST',
         headers: headers,
         body: rawBody
       });
+
+      if (resp.status === 404) {
+        resp = await fetch(`${state.targetUrl}/v1/events`, {
+          method: 'POST',
+          headers: headers,
+          body: rawBody
+        });
+      }
 
       status = resp.status;
       try {

@@ -1064,11 +1064,33 @@ def run_status() -> dict[str, Any]:
 
 
 @router.post("/inputs/scan")
-def scan_inputs(analyst: str = Depends(require_analyst_token)) -> dict[str, Any]:
-    """Scan newly uploaded inputs in data/input/."""
+async def scan_inputs(
+    request: Request,
+    analyst: str = Depends(require_analyst_token),
+) -> dict[str, Any]:
+    """Scan newly uploaded inputs in data/input/ or directly scan payload provided in request body."""
     try:
+        raw_body = await request.body()
+        scan_paths: list[Path] = []
+        if raw_body and len(raw_body.strip()) > 0:
+            try:
+                body_json = json.loads(raw_body.decode("utf-8"))
+            except Exception:
+                body_json = None
+
+            if body_json is not None:
+                input_dir = config.ROOT_DIR / "data" / "input"
+                input_dir.mkdir(parents=True, exist_ok=True)
+                stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%f")
+                scan_file = input_dir / f"scan_{stamp}.json"
+                scan_file.write_text(json.dumps(body_json, indent=2), encoding="utf-8")
+                scan_paths.append(scan_file)
+
+        if scan_paths:
+            return run_dataset(paths=scan_paths)
         return run_dataset(input_only=True)
     except Exception as exc:
+        log.exception("Input scan execution failed")
         raise HTTPException(status_code=500, detail=f"Input scan failed: {exc}") from exc
 
 

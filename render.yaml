@@ -1,0 +1,21 @@
+# Render Infrastructure as Code (Blueprint)
+# Deploy IdentityShield on Render's 100% Free Web Service tier
+services:
+  - type: web
+    name: identityshield
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /api/health
+    envVars:
+      - key: V3_ENABLED
+        value: "true"
+      - key: INGEST_KEYS
+        value: "test-key-1:test_super_secret_signing_key_32bytes_long!,laptop2:super_secret_forwarder_key_32bytes!"
+      - key: INGEST_ALLOWED_ORIGINS
+        value: "*"
+      - key: EMAIL_MODE
+        value: "outbox"
+      - key: DRY_RUN
+        value: "false"

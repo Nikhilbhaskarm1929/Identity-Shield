@@ -1,0 +1,130 @@
+/* =============================================================================
+   IdentityShield — Shared Design Tokens ("Neon Shield" Theme)
+   Source of Truth: DESIGN_SPEC.md §2 (Taken from reference_target_ui.png)
+   ============================================================================= */
+
+:root {
+  /* --- DESIGN_SPEC.md §2 Color Tokens (Dark Command Center - Default) --- */
+  --bg-0: #030605;                          /* Page background (behind everything) */
+  --bg-1: #070c0a;                          /* Sidebar, top bar */
+  --surface-1: #0a110d;                     /* Cards */
+  --surface-2: #0e1712;                     /* Inner panels, inputs, rows inside cards */
+  --surface-3: #13201a;                     /* Hover state, active rows */
+  --border-1: rgba(0, 255, 136, 0.10);      /* Default card border */
+  --border-2: rgba(0, 255, 136, 0.22);      /* Emphasis border, active nav item */
+  --green-500: #00e676;                     /* Primary accent: lines, icons, active text */
+  --green-400: #22ff9a;                     /* Highlights, hover */
+  --green-700: #0a6b3d;                     /* Area-fill base, active nav background */
+  --green-glow: 0 0 24px rgba(0, 230, 118, 0.25); /* Glow on emphasized elements */
+  --red-500: #ff3b3b;                       /* Threats, suspicious, HIGH */
+  --red-700: #5a1010;                       /* Threat card background tint */
+  --red-glow: 0 0 28px rgba(255, 59, 59, 0.30);   /* Glow on threat cards */
+  --amber-500: #f5a524;                     /* MEDIUM severity, warnings */
+  --amber-700: #4a3206;                     /* Medium badge background */
+  --text-1: #eef6f1;                        /* Headings, numbers */
+  --text-2: #a9b8af;                        /* Body, labels */
+  --text-3: #7f9287;                        /* Muted, axis labels, timestamps (WCAG AA >= 4.5:1) */
+
+  /* --- Typography, Geometry & Spacing --- */
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 36px;
+  --sidebar-w: 272px;
+  --topbar-h: 88px;
+  --ease: cubic-bezier(.2,.8,.2,1);
+  --dur-fast: 150ms;
+  --dur: 250ms;
+
+  /* --- Chart & Visualization Tokens (read by JS) --- */
+  --chart-grid: rgba(255, 255, 255, 0.05);
+  --chart-axis: #6b7c72;
+  --chart-normal: #00e676;
+  --chart-suspicious: #ff3b3b;
+
+  /* --- 3D & Map Visualization Tokens --- */
+  --map-ocean: #06100b;
+  --map-land: #16221c;
+  --map-land-border: rgba(0, 230, 118, 0.15);
+  --graph-link: rgba(0, 230, 118, 0.25);
+  --graph-link-threat: rgba(255, 59, 59, 0.65);
+}
+
+/* Light Theme Overrides (Pale surfaces, consistent neon/red accents) */
+[data-theme="light"] {
+  --bg-0: #f5f8f6;
+  --bg-1: #ffffff;
+  --surface-1: #ffffff;
+  --surface-2: #edf3ef;
+  --surface-3: #e2ebe4;
+  --border-1: rgba(0, 150, 80, 0.14);
+  --border-2: rgba(0, 180, 90, 0.28);
+  --green-500: #00b359;
+  --green-400: #00cc66;
+  --green-700: #d4f7e2;
+  --green-glow: 0 0 20px rgba(0, 179, 89, 0.20);
+  --red-500: #e02424;
+  --red-700: #fde8e8;
+  --red-glow: 0 0 20px rgba(224, 36, 36, 0.20);
+  --amber-500: #d97706;
+  --amber-700: #fef3c7;
+  --text-1: #0c1410;
+  --text-2: #344038;
+  --text-3: #6b7c72;
+
+  --chart-grid: rgba(0, 0, 0, 0.06);
+  --chart-axis: #6b7c72;
+  --chart-normal: #00b359;
+  --chart-suspicious: #e02424;
+
+  --map-ocean: #e2ebe4;
+  --map-land: #cfded2;
+  --map-land-border: rgba(0, 150, 80, 0.15);
+  --graph-link: rgba(0, 179, 89, 0.25);
+  --graph-link-threat: rgba(224, 36, 36, 0.65);
+}
+
+/* Global Foundation Styles */
+html, body {
+  background: var(--bg-0);
+  color: var(--text-2);
+  font-family: var(--font-ui);
+}
+
+::selection {
+  background: rgba(0, 230, 118, 0.3);
+  color: var(--text-1);
+}
+
+/* Dark Scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1d2b24 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #1d2b24;
+  border-radius: 8px;
+}
+
+/* Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

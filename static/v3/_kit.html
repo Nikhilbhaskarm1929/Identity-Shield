@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IdentityShield · Component Library & Design System</title>
+
+  <!-- Google Fonts & Design Tokens -->
+  <link rel="stylesheet" href="/v3/assets/css/theme.css">
+  <link rel="stylesheet" href="/v3/assets/css/shell.css">
+  <link rel="stylesheet" href="/v3/assets/css/components.css">
+
+  <!-- Tailwind CSS & Runtime Extender -->
+  <link rel="stylesheet" href="/v3/css/tailwind.css">
+  <script src="/v3/assets/js/tailwind-theme.js"></script>
+
+  <!-- Chart.js & Neon Shield Chart Theme -->
+  <script src="/vendor/chart.umd.min.js"></script>
+  <script src="/v3/assets/js/charts-theme.js"></script>
+</head>
+<body data-page="dashboard">
+
+  <aside id="is-sidebar"></aside>
+
+  <div class="is-main">
+    <header id="is-topbar"></header>
+
+    <main class="is-content">
+      <div id="main-content" style="display:flex; flex-direction:column; gap:28px; max-width:1600px; margin:0 auto; width:100%;">
+
+        <!-- 1. Page Header Block -->
+        <div class="is-page-head">
+          <h1>Component <span class="accent">Library</span></h1>
+          <p>Living design system &amp; component benchmark for the Neon Shield theme (DESIGN_SPEC.md).</p>
+        </div>
+
+        <!-- 2. Row 1: 4 KPI Tiles -->
+        <div class="grid-kpi">
+          <!-- KPI 1 -->
+          <div class="kpi">
+            <div class="kpi__top">
+              <div class="kpi__left">
+                <div class="kpi__icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                </div>
+                <div>
+                  <div class="kpi__value">98.7%</div>
+                  <div class="kpi__label">Protection Rate</div>
+                </div>
+              </div>
+              <span class="kpi__delta up">&uarr; +0.1%</span>
+            </div>
+            <div class="kpi__spark">
+              <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="kpi-spark-grad-1" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--green-500)" stop-opacity="0.4"/>
+                    <stop offset="100%" stop-color="var(--green-500)" stop-opacity="0.0"/>
+                  </linearGradient>
+                </defs>
+                <path d="M0,28 Q30,22 60,25 T120,18 T160,12 T200,6 L200,36 L0,36 Z" fill="url(#kpi-spark-grad-1)"/>
+                <path d="M0,28 Q30,22 60,25 T120,18 T160,12 T200,6" fill="none" stroke="var(--green-500)" stroke-width="2"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- KPI 2 (Danger / Suspicious) -->
+          <div class="kpi card--danger">
+            <div class="kpi__top">
+              <div class="kpi__left">
+                <div class="kpi__icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <div>
+                  <div class="kpi__value" style="color:var(--red-500);">3</div>
+                  <div class="kpi__label">Suspicious Attempts</div>
+                </div>
+              </div>
+              <span class="kpi__delta bad">&uarr; +2 Today</span>
+            </div>
+            <div class="kpi__spark">
+              <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="kpi-spark-grad-2" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--red-500)" stop-opacity="0.45"/>
+                    <stop offset="100%" stop-color="var(--red-500)" stop-opacity="0.0"/>
+                  </linearGradient>
+                </defs>
+                <path d="M0,32 Q40,30 80,24 T140,28 T180,10 T200,4 L200,36 L0,36 Z" fill="url(#kpi-spark-grad-2)"/>
+                <path d="M0,32 Q40,30 80,24 T140,28 T180,10 T200,4" fill="none" stroke="var(--red-500)" stroke-width="2"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- KPI 3 -->
+          <div class="kpi">
+            <div class="kpi__top">
+              <div class="kpi__left">
+                <div class="kpi__icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div>
+                  <div class="kpi__value">14</div>
+                  <div class="kpi__label">Monitored Identities</div>
+                </div>
+              </div>
+              <span class="kpi__delta up">&check; Okta + AWS</span>
+            </div>
+            <div class="kpi__spark">
+              <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+                <path d="M0,20 Q50,15 100,20 T200,12 L200,36 L0,36 Z" fill="url(#kpi-spark-grad-1)"/>
+                <path d="M0,20 Q50,15 100,20 T200,12" fill="none" stroke="var(--green-500)" stroke-width="2"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- KPI 4 -->
+          <div class="kpi">
+            <div class="kpi__top">
+              <div class="kpi__left">
+                <div class="kpi__icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9" cy="9" r="2"/><circle cx="15" cy="15" r="2"/><path d="M9 15h.01"/><path d="M15 9h.01"/></svg>
+                </div>
+                <div>
+                  <div class="kpi__value">15/15</div>
+                  <div class="kpi__label">Active Threat Agents</div>
+                </div>
+              </div>
+              <span class="kpi__delta up">&lt;250ms SLA</span>
+            </div>
+            <div class="kpi__spark">
+              <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+                <path d="M0,18 Q40,24 80,16 T160,18 T200,8 L200,36 L0,36 Z" fill="url(#kpi-spark-grad-1)"/>
+                <path d="M0,18 Q40,24 80,16 T160,18 T200,8" fill="none" stroke="var(--green-500)" stroke-width="2"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Row 2: Area Chart + Alert List & Compare -->
+        <div class="grid-2-1">
+          <!-- Left: Area Chart Card -->
+          <div class="card">
+            <div class="card__head">
+              <h2 class="card__title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Login Activity Overview
+              </h2>
+              <div class="card__actions">
+                <div class="legend">
+                  <span class="legend__item"><span class="legend__dot normal"></span> Normal</span>
+                  <span class="legend__item"><span class="legend__dot suspicious"></span> Suspicious</span>
+                </div>
+                <div class="tabs">
+                  <button type="button" class="tab active">Daily</button>
+                  <button type="button" class="tab">Weekly</button>
+                  <button type="button" class="tab">Monthly</button>
+                </div>
+              </div>
+            </div>
+            <div class="card__body" style="height:280px;">
+              <canvas id="kit-activity-chart"></canvas>
+            </div>
+          </div>
+
+          <!-- Right: Alerts + Compare -->
+          <div style="display:flex; flex-direction:column; gap:20px;">
+            <div class="card" style="padding:18px;">
+              <div class="card__head" style="margin-bottom:14px;">
+                <h3 class="card__title" style="font-size:16px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  Live Threat Signals
+                </h3>
+                <span class="badge high">3 Active</span>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div class="alert-row alert-row--danger">
+                  <div class="alert-row__left">
+                    <div class="alert-row__icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                    <div class="alert-row__info">
+                      <span class="alert-row__title">Impossible Travel: Dallas &rarr; Moscow</span>
+                      <span class="alert-row__meta">svc-report &bull; 10:18 AM</span>
+                    </div>
+                  </div>
+                  <span class="badge high">HIGH</span>
+                </div>
+
+                <div class="alert-row alert-row--warn">
+                  <div class="alert-row__left">
+                    <div class="alert-row__icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                    </div>
+                    <div class="alert-row__info">
+                      <span class="alert-row__title">MFA Fatigue Attack (Push Spam)</span>
+                      <span class="alert-row__meta">sarah.c@corp &bull; 09:44 AM</span>
+                    </div>
+                  </div>
+                  <span class="badge medium">MEDIUM</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Compare Box Component -->
+            <div class="card" style="padding:18px;">
+              <div class="card__head" style="margin-bottom:12px;">
+                <h3 class="card__title" style="font-size:15px;">Login Change Detection</h3>
+                <span class="badge--score">Risk: 92%</span>
+              </div>
+              <div class="compare">
+                <div class="compare__col">
+                  <span class="compare__label">&bull; Previous Login</span>
+                  <span class="compare__value">Dallas, TX (US)</span>
+                  <span class="mono muted" style="font-size:11px;">IP: 198.51.100.22</span>
+                </div>
+                <div class="compare__col flagged">
+                  <span class="compare__label" style="color:var(--red-500);">&bull; Current Login</span>
+                  <span class="compare__value">Moscow (RU)</span>
+                  <span class="mono muted" style="font-size:11px;">IP: 203.0.113.88</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Row 3: Table Component -->
+        <div class="card">
+          <div class="card__head">
+            <h2 class="card__title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Active Identity Sessions &amp; Policies
+            </h2>
+            <div class="card__actions">
+              <input type="text" class="input" placeholder="Filter identity..." style="width:220px;" />
+              <button type="button" class="btn btn--primary">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Enforce Action</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Identity</th>
+                  <th>Source App</th>
+                  <th>Role</th>
+                  <th>IP Address</th>
+                  <th>Risk Level</th>
+                  <th>Status</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="selected">
+                  <td>
+                    <div style="font-weight:700; color:var(--text-1);">svc-report</div>
+                    <div class="mono muted" style="font-size:11px;">ID: ident-9821</div>
+                  </td>
+                  <td>Okta SSO</td>
+                  <td>Service Account</td>
+                  <td class="mono">203.0.113.88</td>
+                  <td><span class="badge high">CRITICAL</span></td>
+                  <td><span class="pill" style="height:28px; padding:0 10px;"><span class="pill__dot bad"></span> Under Review</span></td>
+                  <td style="text-align:right;">
+                    <a href="/v3/cases.html?case_id=case-e1-svcreport" class="btn btn--ghost" style="padding:4px 10px; font-size:12px;">Inspect &rarr;</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="font-weight:700; color:var(--text-1);">sarah.c@corp.internal</div>
+                    <div class="mono muted" style="font-size:11px;">ID: ident-1402</div>
+                  </td>
+                  <td>AWS IAM</td>
+                  <td>Cloud Admin</td>
+                  <td class="mono">198.51.100.45</td>
+                  <td><span class="badge medium">MEDIUM</span></td>
+                  <td><span class="pill" style="height:28px; padding:0 10px;"><span class="pill__dot warn"></span> Multi-factor Alert</span></td>
+                  <td style="text-align:right;">
+                    <button type="button" class="btn btn--ghost" style="padding:4px 10px; font-size:12px;">Details</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div style="font-weight:700; color:var(--text-1);">alex.w@corp.internal</div>
+                    <div class="mono muted" style="font-size:11px;">ID: ident-0341</div>
+                  </td>
+                  <td>Google Workspace</td>
+                  <td>Engineering</td>
+                  <td class="mono">192.0.2.14</td>
+                  <td><span class="badge low">NORMAL</span></td>
+                  <td><span class="pill" style="height:28px; padding:0 10px;"><span class="pill__dot ok"></span> Active Session</span></td>
+                  <td style="text-align:right;">
+                    <button type="button" class="btn btn--ghost" style="padding:4px 10px; font-size:12px;">Details</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 5. Row 4: UI Elements Showcase -->
+        <div class="grid-1-1">
+          <!-- Buttons & Badges -->
+          <div class="card">
+            <h3 class="card__title" style="margin-bottom:16px;">Buttons &amp; Badges</h3>
+            <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:20px;">
+              <button type="button" class="btn btn--primary">Primary Action</button>
+              <button type="button" class="btn btn--ghost">Ghost Action</button>
+              <button type="button" class="btn btn--danger">Danger Action</button>
+              <button type="button" class="btn btn--icon btn--ghost" title="Refresh">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              </button>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+              <span class="badge high">HIGH SEVERITY</span>
+              <span class="badge medium">MEDIUM SEVERITY</span>
+              <span class="badge low">LOW SEVERITY</span>
+              <span class="badge info">INFO ONLY</span>
+              <span class="badge--score">Risk Score: 92%</span>
+            </div>
+          </div>
+
+          <!-- Form Controls & Skeleton Loading -->
+          <div class="card">
+            <h3 class="card__title" style="margin-bottom:16px;">Controls &amp; Shimmer</h3>
+            <div style="display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap;">
+              <input type="text" class="input" placeholder="Text input focus ring..." style="flex:1; min-width:180px;" />
+              <select class="select" style="min-width:150px;">
+                <option>Active Policy</option>
+                <option>Restricted</option>
+                <option>Quarantined</option>
+              </select>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <div class="skeleton" style="height:18px; width:80%;"></div>
+              <div class="skeleton" style="height:14px; width:60%;"></div>
+              <div class="skeleton" style="height:14px; width:90%;"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/v3/assets/js/shell.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize Area Chart on Demo Page
+      if (window.IS && window.IS.charts) {
+        window.IS.charts.area('kit-activity-chart', {
+          labels: ['12AM', '2AM', '4AM', '6AM', '8AM', '10AM', '12PM', '2PM', '4PM', '6PM', '8PM', '10PM', '12AM'],
+          normal: [50, 75, 95, 105, 90, 115, 125, 120, 105, 95, 115, 130, 95],
+          suspicious: [2, 1, 0, 2, 1, 3, 2, 4, 3, 42, 12, 3, 1],
+        });
+      }
+    });
+  </script>
+</body>
+</html>

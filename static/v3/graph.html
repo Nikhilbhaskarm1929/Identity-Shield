@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IdentityShield · 3D Identity Graph</title>
+
+  <!-- Google Fonts & Shared Theme Tokens (Phase 1) -->
+  <link rel="stylesheet" href="/v3/assets/css/theme.css">
+  <link rel="stylesheet" href="/v3/assets/css/shell.css">
+  <link rel="stylesheet" href="/v3/assets/css/components.css">
+
+  <!-- Core Theme Styles -->
+  <script>try { const t = localStorage.getItem('identityshield_theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) { }</script>
+  <link rel="stylesheet" href="/v3/css/theme.css">
+  <link rel="stylesheet" href="/v3/css/motion.css">
+
+  <!-- Tailwind CSS -->
+  <link rel="stylesheet" href="/v3/css/tailwind.css">
+  <script src="/v3/assets/js/tailwind-theme.js"></script>
+
+  <!-- Vendored 3D & 2D Graph Engines -->
+  <script src="/vendor/three.min.js"></script>
+  <script src="/vendor/3d-force-graph.min.js"></script>
+  <script src="/vendor/vis-network.min.js"></script>
+</head>
+
+<body data-page="graph">
+
+  <aside id="is-sidebar"></aside>
+  <canvas id="bg3d-canvas" style="display:none;"></canvas>
+
+  <div class="is-main">
+    <header id="is-topbar"></header>
+
+    <main class="is-content">
+      <div id="main-content"
+        style="display:flex; flex-direction:column; gap:20px; max-width:1600px; margin:0 auto; width:100%; height:calc(100vh - 100px); min-height:680px;">
+
+        <!-- 1. Page Header Block & Filter Controls -->
+        <div class="is-page-head"
+          style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;">
+          <div>
+            <h1>Identity <span class="accent">Graph</span></h1>
+            <p>Relationships between users, devices, IPs and apps</p>
+          </div>
+
+          <!-- Filter Controls Bar -->
+          <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <label for="select-graph-identity" class="mono muted" style="font-size:12px;">FOCUS:</label>
+              <select id="select-graph-identity" class="select" style="min-width:240px;">
+                <option value="global">Global Attack Graph (All Ingested Logs)</option>
+                <option value="svc-report">svc-report (Hero Attack Chain)</option>
+                <option value="jdoe">jdoe (Engineering)</option>
+                <option value="asmith">asmith (DevOps)</option>
+              </select>
+            </div>
+
+            <label
+              style="display:flex; align-items:center; gap:6px; font-size:12px; font-family:var(--font-mono); color:var(--text-2); cursor:pointer;">
+              <input id="chk-only-attack" type="checkbox" style="accent-color:var(--red-500);" />
+              <span>Only Attack Path</span>
+            </label>
+
+            <label
+              style="display:flex; align-items:center; gap:6px; font-size:12px; font-family:var(--font-mono); color:var(--text-2); cursor:pointer;">
+              <input id="chk-campaign-links" type="checkbox" checked style="accent-color:var(--green-500);" />
+              <span>Show Campaign Links</span>
+            </label>
+
+            <!-- Flagged Entities Badge -->
+            <span id="graph-threat-badge" class="badge high" style="padding:4px 10px; font-size:11px;">
+              <span class="pill__dot bad"></span> <span id="graph-threat-count">9 FLAGGED ENTITIES</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- 2. Dual Columns: 3D Force Graph Card + Side Inspector Panel -->
+        <div style="display:grid; grid-template-columns:1fr 380px; gap:20px; flex:1; min-height:0;">
+
+          <!-- Left: 3D Force Graph Card -->
+          <div class="card"
+            style="position:relative; overflow:hidden; padding:0; display:flex; flex-direction:column; height:100%;">
+
+            <!-- Dark Legend Card Overlay (Top-Left) -->
+            <div class="card"
+              style="position:absolute; top:16px; left:16px; z-index:15; padding:12px 16px; background:rgba(10, 16, 13, 0.88); backdrop-filter:blur(10px); border:1px solid var(--border-2); border-radius:var(--radius-md); pointer-events:none;">
+              <div class="mono muted"
+                style="font-size:10px; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.04em;">Graph Legend
+              </div>
+              <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; font-family:var(--font-mono);">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="color:var(--green-500); font-size:14px;">&bull;</span>
+                  <span style="color:var(--text-1);">Identity / User</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="color:var(--text-2); font-size:14px;">&bull;</span>
+                  <span style="color:var(--text-1);">Device / Session / Resource</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="color:var(--amber-500); font-size:14px;">&bull;</span>
+                  <span style="color:var(--text-1);">Risky IP / External Ingress</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="color:var(--red-500); font-size:14px;">&bull;</span>
+                  <span style="color:var(--text-1);">Flagged Threat / Attack Node</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="color:var(--red-500); font-weight:700;">&rarr;</span>
+                  <span style="color:var(--text-1);">Attack Path (Particles)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Floating Controls Toolbar (Top-Right) -->
+            <div class="card"
+              style="position:absolute; top:16px; right:16px; z-index:15; display:flex; gap:6px; padding:6px 10px; background:rgba(10, 16, 13, 0.88); backdrop-filter:blur(10px); border:1px solid var(--border-2); border-radius:var(--radius-md);">
+              <button id="btn-zoom-in" class="btn btn--icon" title="Zoom In" type="button"
+                style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  <line x1="11" y1="8" x2="11" y2="14" />
+                  <line x1="8" y1="11" x2="14" y2="11" />
+                </svg>
+              </button>
+              <button id="btn-zoom-out" class="btn btn--icon" title="Zoom Out" type="button"
+                style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  <line x1="8" y1="11" x2="14" y2="11" />
+                </svg>
+              </button>
+              <button id="btn-reset-camera" class="btn btn--icon" title="Reset Camera" type="button"
+                style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                </svg>
+              </button>
+              <button id="btn-refresh-graph" class="btn btn--icon" title="Refresh Live" type="button"
+                style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 4v6h-6" />
+                  <path d="M1 20v-6h6" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                </svg>
+              </button>
+              <button id="btn-screenshot-graph" class="btn btn--icon" title="Capture PNG" type="button"
+                style="width:32px; height:32px; padding:0; display:flex; align-items:center; justify-content:center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Bottom Interaction Hint -->
+            <div
+              style="position:absolute; bottom:16px; left:16px; z-index:15; pointer-events:none; font-family:var(--font-mono); font-size:11px; color:var(--text-3); background:rgba(10, 16, 13, 0.85); backdrop-filter:blur(8px); border:1px solid var(--border-1); padding:6px 12px; border-radius:var(--radius-sm);">
+              Drag: Rotate &middot; Right-click: Pan &middot; Scroll: Zoom &middot; Click Node: Focus &amp; Inspect
+            </div>
+
+            <!-- 3D Canvas / 2D Vis Container -->
+            <div id="graph-canvas-container" style="flex:1; width:100%; height:100%; min-height:480px;"></div>
+          </div>
+
+          <!-- Right Column: Entity Inspector Panel -->
+          <div class="card"
+            style="display:flex; flex-direction:column; height:100%; min-height:0; overflow-y:auto; padding:20px; gap:16px;">
+            <div>
+              <div class="mono accent"
+                style="font-size:11px; text-transform:uppercase; font-weight:700; letter-spacing:0.04em;">Entity
+                Inspector</div>
+              <h3 id="panel-node-title"
+                style="margin:4px 0 0 0; font-size:18px; color:var(--text-1); word-break:break-all;">Select a Node</h3>
+            </div>
+
+            <!-- Node Metadata Comparison Table -->
+            <div id="panel-node-details" style="display:flex; flex-direction:column; gap:8px;">
+              <div class="empty"
+                style="padding:24px 8px; text-align:center; color:var(--text-3); font-size:12px; line-height:1.5;">
+                Click any entity node in the 3D identity graph to inspect its blast radius, threat score, and link to
+                active cases.
+              </div>
+            </div>
+
+            <!-- Linked Case Card (When Node is Associated with Incident) -->
+            <div id="panel-linked-case" class="card card--danger" style="display:none; padding:16px; margin-top:auto;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span class="badge high" style="font-size:10px;">E1 RESTRICT</span>
+                <span class="mono" style="font-size:12px; font-weight:700; color:var(--red-500);">92.4 RISK</span>
+              </div>
+              <div style="font-weight:600; color:var(--text-1); font-size:13px; margin-bottom:12px;">Multi-Stage
+                Escalation Detected</div>
+              <a id="panel-btn-investigate" href="/v3/case.html?id=case-e1-svcreport" class="btn btn--danger"
+                style="width:100%; justify-content:center; padding:8px 12px; font-size:12px;">
+                Investigate Case &rarr;
+              </a>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/v3/assets/js/shell.js"></script>
+  <script type="module" src="/v3/js/pages/graph.js"></script>
+</body>
+
+</html>

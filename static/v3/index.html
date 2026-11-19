@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IdentityShield — Real-time Identity Threat Detection</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300FF88'%3E%3Cpath d='M12 2L3 6v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V6l-9-4zm-1 16l-4-4 1.41-1.41L11 15.17l6.59-6.59L19 10l-8 8z'/%3E%3C/svg%3E">
+
+  <!-- Fonts: Inter, Plus Jakarta Sans & JetBrains Mono -->
+  
+  <!-- Tailwind & Theme CSS -->
+  <link rel="stylesheet" href="/v3/css/tailwind.css">
+  <link rel="stylesheet" href="/v3/css/theme.css">
+  <!-- Chart.js -->
+  <script src="/vendor/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #080D0B;
+      --sidebar-bg: #09100D;
+      --card-bg: rgba(13, 22, 18, 0.75);
+      --card-border: rgba(16, 185, 129, 0.18);
+      --card-border-subtle: rgba(255, 255, 255, 0.06);
+      --neon-green: #00FF88;
+      --emerald: #10B981;
+      --emerald-dark: #064E3B;
+      --alert-red: #EF4444;
+      --alert-red-glow: rgba(239, 68, 68, 0.45);
+      --amber: #F59E0B;
+      --text-white: #FFFFFF;
+      --text-muted: #8E9BAE;
+      --text-dim: #5A6678;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 10% 15%, rgba(0, 255, 136, 0.035) 0%, transparent 45%),
+        radial-gradient(circle at 90% 85%, rgba(239, 68, 68, 0.03) 0%, transparent 45%),
+        linear-gradient(180deg, #090E0C 0%, #060908 100%);
+      color: #E2E8F0;
+      min-height: 100vh;
+      display: flex;
+      overflow-x: hidden;
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Glass card styling */
+    .glass-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--card-border-subtle);
+      border-radius: 12px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .glass-card-green {
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .glass-card-green:hover {
+      border-color: rgba(16, 185, 129, 0.45);
+      box-shadow: 0 4px 20px rgba(0, 255, 136, 0.08);
+    }
+
+    .glass-card-red {
+      border: 1px solid rgba(239, 68, 68, 0.6) !important;
+      background: radial-gradient(ellipse at top left, rgba(239, 68, 68, 0.16) 0%, rgba(13, 20, 16, 0.85) 75%) !important;
+      box-shadow: 0 0 24px rgba(239, 68, 68, 0.18), inset 0 0 16px rgba(239, 68, 68, 0.08) !important;
+    }
+
+    .glass-card-red:hover {
+      box-shadow: 0 0 32px rgba(239, 68, 68, 0.28), inset 0 0 20px rgba(239, 68, 68, 0.12) !important;
+    }
+
+    /* Sidebar active nav item */
+    .nav-item-active {
+      background: linear-gradient(90deg, rgba(0, 255, 136, 0.24) 0%, rgba(16, 185, 129, 0.08) 100%);
+      border: 1px solid rgba(0, 255, 136, 0.45);
+      color: #FFFFFF !important;
+      box-shadow: 0 0 16px rgba(0, 255, 136, 0.15);
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #8E9BAE;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+
+    .nav-item:hover:not(.nav-item-active) {
+      color: #FFFFFF;
+      background: rgba(255, 255, 255, 0.04);
+      transform: translateX(2px);
+    }
+
+    /* Decorative Speed Stripes */
+    .speed-stripes {
+      display: flex;
+      gap: 3px;
+    }
+    .speed-stripes span {
+      display: block;
+      width: 4px;
+      height: 14px;
+      background: var(--neon-green);
+      transform: skewX(-24deg);
+      border-radius: 1px;
+      opacity: 0.75;
+    }
+
+    /* Radar ripple animation for world map suspicious location */
+    @keyframes radarWave {
+      0% {
+        transform: translate(-50%, -50%) scale(0.4);
+        opacity: 0.9;
+      }
+      50% {
+        opacity: 0.5;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(2.8);
+        opacity: 0;
+      }
+    }
+
+    .radar-circle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      border-radius: 50%;
+      border: 1.5px solid #EF4444;
+      pointer-events: none;
+      animation: radarWave 2.6s infinite cubic-bezier(0.2, 0.6, 0.35, 1);
+    }
+
+    .radar-circle:nth-child(2) {
+      animation-delay: 0.85s;
+    }
+    .radar-circle:nth-child(3) {
+      animation-delay: 1.7s;
+    }
+
+    /* Double chevron pulse */
+    @keyframes chevronPulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 0.7;
+      }
+      50% {
+        transform: scale(1.15) translateX(3px);
+        opacity: 1;
+        filter: drop-shadow(0 0 6px #EF4444);
+      }
+    }
+
+    .chevron-pulse {
+      animation: chevronPulse 1.8s infinite ease-in-out;
+    }
+
+    /* Skeletons */
+    .skeleton {
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 75%);
+      background-size: 200% 100%;
+      animation: skeletonShimmer 1.8s infinite;
+      border-radius: 4px;
+    }
+
+    @keyframes skeletonShimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090D0B;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1C2B24;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #00FF88;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background 3D canvas and test compatibility hooks -->
+  <canvas id="bg3d-canvas" style="display:none;"></canvas>
+  <button id="btn-run-dataset" class="hidden" style="display:none;"></button>
+  <div id="top-identities-table" class="hidden" style="display:none;"></div>
+
+  <!-- Drag-and-drop full-window overlay -->
+  <div id="drop-overlay" style="display: none;" class="fixed inset-0 bg-[#080D0B]/92 backdrop-blur-md z-[100] flex flex-col items-center justify-center border-4 border-dashed border-[#00FF88] transition-all">
+    <div class="w-20 h-20 rounded-full bg-[#00FF88]/15 border border-[#00FF88] flex items-center justify-center text-[#00FF88] mb-4 animate-bounce">
+      <svg class="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="17 8 12 3 7 8"></polyline>
+        <line x1="12" y1="3" x2="12" y2="15"></line>
+      </svg>
+    </div>
+    <h2 class="text-2xl font-bold text-white mb-2 tracking-tight">Drop JSON Logs to Analyze</h2>
+    <p class="text-sm text-[#8E9BAE]">Drop sample_attack_scenario.json or any Okta / CloudTrail export</p>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed top-5 right-5 z-[101] flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ==================== LEFT SIDEBAR ==================== -->
+  <aside class="w-[230px] shrink-0 min-h-screen bg-[#09100D] border-r border-[#15231C] flex flex-col justify-between relative select-none z-20">
+    
+    <!-- Top Branding & Navigation -->
+    <div class="p-5 flex flex-col">
+      
+      <!-- Brand Logo -->
+      <a href="/v3/index.html" class="flex flex-col items-start gap-1 mb-8 group text-decoration-none">
+        <div class="flex items-center gap-3">
+          <!-- Shield with Fingerprint Icon -->
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center relative">
+            <svg class="w-9 h-9" viewBox="0 0 36 36" fill="none">
+              <!-- Glowing Shield Base -->
+              <path d="M18 2L5 7.5V17C5 25.5 10.5 32.5 18 35C25.5 32.5 31 25.5 31 17V7.5L18 2Z" 
+                    stroke="#00FF88" stroke-width="2.2" stroke-linejoin="round" fill="rgba(0, 255, 136, 0.08)"
+                    style="filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.4));"/>
+              <!-- Fingerprint Lines Inside Shield -->
+              <path d="M18 9C14.5 9 12 11.5 12 15C12 19 14.5 22 18 22C21.5 22 24 19 24 15C24 11.5 21.5 9 18 9Z" 
+                    stroke="#00FF88" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="2 1.5"/>
+              <path d="M15 15C15 13.5 16.3 12.2 18 12.2C19.7 12.2 21 13.5 21 15C21 17 19.5 18.8 18 18.8" 
+                    stroke="#00FF88" stroke-width="1.4" stroke-linecap="round"/>
+              <path d="M18 15V16" stroke="#00FF88" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M10 17C10 21.5 13 25.5 18 27C23 25.5 26 21.5 26 17" 
+                    stroke="#00FF88" stroke-width="1.2" stroke-linecap="round" opacity="0.65"/>
+            </svg>
+          </div>
+          <div class="flex flex-col">
+            <span class="text-white font-bold text-lg tracking-tight leading-tight">IdentityShield</span>
+            <span class="text-[10px] text-[#00FF88] opacity-80 tracking-wide font-medium">Detect. Prevent. Secure.</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Navigation Menu -->
+      <nav class="flex flex-col gap-2">
+        
+        <!-- Dashboard (Active) -->
+        <a href="/v3/index.html" class="nav-item nav-item-active">
+          <svg class="w-5 h-5 text-[#00FF88]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+          <span class="font-semibold text-sm">Dashboard</span>
+        </a>
+
+        <!-- Live Monitor -->
+        <a href="/v3/live.html" class="nav-item">
+          <svg class="w-5 h-5 text-[#8E9BAE]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+          <span>Live Monitor</span>
+        </a>
+
+        <!-- Threat Cases -->
+        <a href="/v3/cases.html" class="nav-item">
+          <svg class="w-5 h-5 text-[#8E9BAE]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span>Threat Cases</span>
+        </a>
+
+        <!-- Ingest & Scan -->
+        <a href="/v3/input.html" class="nav-item">
+          <svg class="w-5 h-5 text-[#8E9BAE]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <span>Ingest &amp; Scan</span>
+        </a>
+
+        <!-- Analytics -->
+        <a href="/v3/analytics.html" class="nav-item">
+          <svg class="w-5 h-5 text-[#8E9BAE]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          <span>Analytics</span>
+        </a>
+
+        <!-- Reports -->
+        <a href="/v3/audit.html" class="nav-item">
+          <svg class="w-5 h-5 text-[#8E9BAE]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <span>Reports</span>
+        </a>
+
+        <!-- Settings -->
+        <a href="/v3/settings.html" class="nav-item">
+          <svg class="w-5 h-5 text-[#8E9BAE]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span>Settings</span>
+        </a>
+
+      </nav>
+    </div>
+
+    <!-- Bottom Decorative Wave Ribbon & System Status -->
+    <div class="relative w-full overflow-hidden flex flex-col justify-end">
+      
+      <!-- Flowing Sine Waves Graphic -->
+      <div class="w-full h-28 opacity-45 pointer-events-none mb-1">
+        <svg viewBox="0 0 230 110" preserveAspectRatio="none" class="w-full h-full">
+          <path d="M-10,95 Q50,30 110,85 T230,40" fill="none" stroke="#00FF88" stroke-width="1.4" opacity="0.4" />
+          <path d="M-10,75 Q60,10 130,70 T240,30" fill="none" stroke="#00FF88" stroke-width="1.8" opacity="0.65" />
+          <path d="M-10,85 Q40,40 120,95 T230,60" fill="none" stroke="#10B981" stroke-width="1.2" opacity="0.5" />
+          <path d="M-10,100 Q70,50 140,80 T240,50" fill="none" stroke="#00FF88" stroke-width="0.8" opacity="0.3" />
+        </svg>
+      </div>
+
+      <!-- System Status Widget -->
+      <div class="p-4 mx-3 mb-4 rounded-xl bg-[#0C1511] border border-[#182A21] flex items-center gap-3">
+        <div class="relative flex items-center justify-center">
+          <span class="w-2.5 h-2.5 rounded-full bg-[#00FF88] inline-block" style="box-shadow: 0 0 8px #00FF88;"></span>
+          <span class="absolute w-4 h-4 rounded-full bg-[#00FF88] opacity-40 animate-ping"></span>
+        </div>
+        <div class="flex flex-col leading-tight">
+          <span class="text-white text-xs font-medium">System Status</span>
+          <span class="text-[#00FF88] text-xs font-semibold">All Systems Online</span>
+          <span class="text-[#5A6678] text-[10px] mt-0.5" id="engine-status-uptime">Uptime: 99.9%</span>
+        </div>
+      </div>
+
+    </div>
+
+  </aside>
+
+  <!-- ==================== MAIN CONTENT AREA ==================== -->
+  <main class="flex-1 flex flex-col min-h-screen p-6 lg:p-7 gap-6 max-w-[1600px] mx-auto w-full">
+    
+    <!-- Top Header Bar -->
+    <header class="flex items-center justify-between w-full">
+      
+      <!-- Left: Status Pills -->
+      <div class="flex items-center gap-3">
+        <!-- Connected to Okta Pill -->
+        <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0E1713] border border-[#1A2E23] text-xs font-medium text-[#E2E8F0]">
+          <span class="w-2 h-2 rounded-full bg-[#00FF88]" style="box-shadow: 0 0 6px #00FF88;"></span>
+          <span>Connected to Ingestion</span>
+        </div>
+
+        <!-- Direct Upload JSON Logs Button -->
+        <label for="dashboard-file-upload" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0E1713] border border-[#00FF88]/50 hover:border-[#00FF88] text-xs font-semibold text-[#00FF88] hover:bg-[#00FF88]/10 cursor-pointer transition shadow-[0_0_10px_rgba(0,255,136,0.15)]" title="Upload and scan any JSON log file">
+          <svg class="w-3.5 h-3.5 text-[#00FF88]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <span id="upload-btn-label">Upload JSON Logs</span>
+          <input type="file" id="dashboard-file-upload" accept=".json,.jsonl,.log" class="hidden" />
+        </label>
+
+        <!-- Simulator Mode Pill -->
+        <div id="sim-topbar-pill" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0E1713] border border-[#1A2E23] text-xs font-medium text-[#8E9BAE]">
+          <span id="sim-topbar-dot" class="w-2 h-2 rounded-full bg-[#F59E0B]"></span>
+          <span>Simulator: <strong id="sim-topbar-text" class="text-[#F59E0B]">MOCK</strong></span>
+        </div>
+
+        <!-- Last Sync Pill -->
+        <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0E1713] border border-[#1A2E23] text-xs font-medium text-[#8E9BAE]">
+          <span id="last-sync-time">Syncing...</span>
+        </div>
+      </div>
+
+      <!-- Right: Priority Motto, Notification Bell & User Profile -->
+      <div class="flex items-center gap-5">
+        
+        <!-- Slogan & Speed Stripes -->
+        <div class="hidden md:flex items-center gap-2 text-xs text-[#8E9BAE] italic font-medium">
+          <span>Your Identity. Our Priority.</span>
+          <div class="speed-stripes ml-1">
+            <span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+
+        <!-- Notification Bell with Count -->
+        <a href="/v3/cases.html" class="relative w-9 h-9 rounded-full bg-[#0E1713] border border-[#1A2E23] flex items-center justify-center text-[#8E9BAE] hover:text-white hover:border-[#00FF88] transition cursor-pointer" title="Active Cases">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span id="nav-open-cases-badge" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#EF4444] text-white text-[10px] font-bold flex items-center justify-center opacity-0 transition-opacity" style="box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);">
+            0
+          </span>
+        </a>
+
+        <!-- User Profile Pill -->
+        <div class="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-[#0E1713] border border-[#1A2E23] text-xs text-white cursor-pointer hover:border-[#00FF88] transition">
+          <div class="w-6 h-6 rounded-full bg-[#1C2C24] border border-[#00FF88] text-[#00FF88] font-bold text-[11px] flex items-center justify-center">
+            O
+          </div>
+          <span class="font-semibold text-sm">Security Analyst</span>
+          <svg class="w-3.5 h-3.5 text-[#8E9BAE]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+
+      </div>
+
+    </header>
+
+    <!-- Page Title & Subtitle -->
+    <div class="flex items-center gap-3">
+      <!-- Neon Green Vertical Bar -->
+      <div class="w-1.5 h-9 rounded-full bg-[#00FF88]" style="box-shadow: 0 0 12px rgba(0, 255, 136, 0.6);"></div>
+      <div>
+        <h1 class="text-2xl lg:text-3xl font-extrabold tracking-tight flex items-center gap-2">
+          <span class="text-white">Identity</span>
+          <span class="text-[#00FF88]" style="text-shadow: 0 0 14px rgba(0, 255, 136, 0.4);">Shield</span>
+        </h1>
+        <p class="text-xs lg:text-sm text-[#8E9BAE] mt-0.5">
+          Autonomous Zero-Trust Identity Threat Detection &amp; Containment
+        </p>
+      </div>
+    </div>
+
+    <!-- Drag & Drop / Upload Banner Strip -->
+    <div id="dash-dropzone-strip" class="w-full p-4 rounded-xl border border-dashed border-[#00FF88]/40 hover:border-[#00FF88] bg-[#0E1713]/70 hover:bg-[#00FF88]/5 transition-all flex items-center justify-between gap-4 cursor-pointer shadow-[0_0_15px_rgba(0,255,136,0.06)]">
+      <div class="flex items-center gap-3.5">
+        <div class="w-10 h-10 rounded-lg bg-[#00FF88]/10 border border-[#00FF88]/30 flex items-center justify-center text-[#00FF88] shrink-0">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+        </div>
+        <div class="flex flex-col">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold text-white">Drag &amp; Drop JSON Log File Anywhere to Scan</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-[#00FF88]/20 text-[#00FF88] border border-[#00FF88]/40 font-mono">LIVE SCANNER</span>
+          </div>
+          <span class="text-xs text-[#8E9BAE]">Drop sample_attack_scenario.json or Okta/CloudTrail logs here, or click to browse</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button type="button" class="px-4 py-2 rounded-lg bg-[#00FF88] hover:bg-[#00CC6A] text-[#080D0B] font-bold text-xs transition flex items-center gap-2 shadow-[0_0_12px_rgba(0,255,136,0.3)]">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Select File to Scan
+        </button>
+      </div>
+      <input type="file" id="dash-strip-file-input" accept=".json,.jsonl,.log" class="hidden" />
+    </div>
+
+    <!-- ==================== ROW 1: 4 DEFENSIVE KPI CARDS ==================== -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+      
+      <!-- Card 1: Identities Monitored -->
+      <div class="glass-card glass-card-green p-4 flex flex-col justify-between relative overflow-hidden group">
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-[#0C2218] border border-[#14422D] flex items-center justify-center text-[#00FF88]">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+            <div>
+              <div id="kpi-ident-count" class="text-2xl font-bold text-white tracking-tight font-mono">&mdash;</div>
+              <div class="text-xs text-[#8E9BAE] font-medium">Identities Monitored</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-1 text-xs text-[#00FF88] font-semibold">
+            <span id="kpi-ident-status">ACTIVE</span>
+          </div>
+        </div>
+        <div class="mt-3 flex items-center justify-between text-[11px] text-[#8E9BAE]">
+          <span id="kpi-ident-caption">Loading identities...</span>
+        </div>
+      </div>
+
+      <!-- Card 2: Open Cases (ALERT CARD) -->
+      <div id="card-open-cases" class="glass-card glass-card-green p-4 flex flex-col justify-between relative overflow-hidden group transition-all">
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-3">
+            <div id="kpi-cases-icon-box" class="w-10 h-10 rounded-lg bg-[#0C2218] border border-[#14422D] flex items-center justify-center text-[#00FF88]">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </div>
+            <div>
+              <div id="kpi-cases-count" class="text-2xl font-bold text-white tracking-tight font-mono">&mdash;</div>
+              <div class="text-xs text-[#8E9BAE] font-medium">Open Cases</div>
+            </div>
+          </div>
+          <div id="kpi-cases-tag" class="flex items-center gap-1 text-xs text-[#8E9BAE] font-semibold">
+            <span>&mdash;</span>
+          </div>
+        </div>
+        <div class="mt-3 flex items-center justify-between text-[11px] text-[#8E9BAE]">
+          <span id="kpi-cases-breakdown">Loading cases...</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Logins Analysed -->
+      <div class="glass-card glass-card-green p-4 flex flex-col justify-between relative overflow-hidden group">
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-[#0C2218] border border-[#14422D] flex items-center justify-center text-[#00FF88]">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+            </div>
+            <div>
+              <div id="kpi-logins-count" class="text-2xl font-bold text-white tracking-tight font-mono">&mdash;</div>
+              <div class="text-xs text-[#8E9BAE] font-medium">Logins Analysed</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-1 text-xs text-[#00FF88] font-semibold">
+            <span>INSPECTED</span>
+          </div>
+        </div>
+        <div class="mt-3 flex items-center justify-between text-[11px] text-[#8E9BAE]">
+          <span id="kpi-logins-caption">Scanning event window...</span>
+        </div>
+      </div>
+
+      <!-- Card 4: Decision Latency p95 -->
+      <div class="glass-card glass-card-green p-4 flex flex-col justify-between relative overflow-hidden group">
+        <div class="flex items-start justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-[#0C2218] border border-[#14422D] flex items-center justify-center text-[#00FF88]">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <div>
+              <div id="kpi-latency-val" class="text-2xl font-bold text-white tracking-tight font-mono">&mdash;</div>
+              <div class="text-xs text-[#8E9BAE] font-medium">Decision Latency p95</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-1 text-xs text-[#00FF88] font-semibold">
+            <span id="kpi-latency-badge">&lt; 100ms</span>
+          </div>
+        </div>
+        <div class="mt-3 flex items-center justify-between text-[11px] text-[#8E9BAE]">
+          <span id="kpi-latency-caption">Hot-path pipeline</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== ROW 2: DUAL VISUALIZATIONS ==================== -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-5 w-full">
+      
+      <!-- Left Card: Login Activity Overview (7 cols) -->
+      <div class="glass-card lg:col-span-7 p-5 flex flex-col justify-between">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-[#8E9BAE]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            <h2 class="text-sm lg:text-base font-semibold text-white">Login Activity Overview</h2>
+          </div>
+
+          <div class="flex items-center gap-4 text-xs font-medium">
+            <!-- Dropdown Filter Pill -->
+            <div class="relative">
+              <select id="time-range-select" class="bg-[#0A130F] text-[#E2E8F0] border border-[#1A2E23] rounded-lg px-2.5 py-1 text-xs cursor-pointer focus:outline-none focus:border-[#00FF88]">
+                <option value="day" selected>Daily View</option>
+                <option value="hour">Hourly View</option>
+              </select>
+            </div>
+
+            <!-- Chart Legends -->
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-[#00FF88]" style="box-shadow:0 0 6px #00FF88;"></span>
+                <span class="text-[#8E9BAE]">Normal Logins</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-[#EF4444]" style="box-shadow:0 0 6px #EF4444;"></span>
+                <span class="text-[#8E9BAE]">Suspicious Logins</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Canvas Area for Chart.js -->
+        <div class="w-full h-[220px] relative">
+          <div id="chart-skeleton" class="absolute inset-0 skeleton flex items-center justify-center text-xs text-[#8E9BAE]">Loading login timeseries...</div>
+          <canvas id="loginActivityChart"></canvas>
+        </div>
+
+        <div class="text-[10px] text-[#5A6678] mt-2 text-right data-as-of-caption">
+          Syncing with live API...
+        </div>
+
+      </div>
+
+      <!-- Right Card: Global Login Locations (5 cols) -->
+      <div class="glass-card lg:col-span-5 p-5 flex flex-col justify-between">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-[#8E9BAE]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+            <h2 class="text-sm lg:text-base font-semibold text-white">Global Login Locations</h2>
+          </div>
+
+          <!-- Legend -->
+          <div class="flex items-center gap-3 text-xs font-medium">
+            <div class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-[#00FF88]"></span>
+              <span class="text-[#8E9BAE]">Normal</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-[#EF4444]"></span>
+              <span class="text-[#8E9BAE]">Active Threat</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stylized World Map with Dynamic Points from API -->
+        <div class="w-full h-[220px] relative rounded-lg overflow-hidden bg-[#0A120E] border border-[#14231B] flex items-center justify-center p-2">
+          
+          <!-- Vector World Map Silhouette -->
+          <svg class="w-full h-full object-contain opacity-75" viewBox="0 0 1000 500" fill="#1C2B24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M150,90 Q220,70 290,110 Q320,150 280,210 Q240,250 200,230 Q160,200 130,160 Z" />
+            <path d="M120,60 Q170,40 220,60 Q190,90 140,80 Z" />
+            <path d="M280,260 Q340,280 360,340 Q340,420 290,460 Q260,380 270,300 Z" />
+            <path d="M470,90 Q540,80 560,130 Q520,160 480,140 Q460,110 470,90 Z" />
+            <path d="M490,60 Q520,40 540,70 Z" />
+            <path d="M470,170 Q560,160 580,240 Q570,340 510,380 Q460,320 450,220 Z" />
+            <path d="M570,70 Q750,50 850,110 Q880,190 780,230 Q700,200 640,150 Z" />
+            <path d="M660,180 Q710,180 720,240 Q690,290 660,230 Z" />
+            <path d="M780,320 Q860,310 880,360 Q850,420 790,400 Q760,360 780,320 Z" />
+          </svg>
+
+          <!-- Dynamic points container rendered by JS -->
+          <div id="dynamic-map-points" class="absolute inset-0 pointer-events-none"></div>
+
+        </div>
+
+        <div class="text-[10px] text-[#5A6678] mt-2 text-right data-as-of-caption">
+          Syncing with live API...
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ==================== ROW 3: DETAILED OPERATIONAL CARDS ==================== -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-5 w-full">
+      
+      <!-- Left Card: Recent Alerts (5 cols) -->
+      <div class="glass-card lg:col-span-5 p-5 flex flex-col justify-between" style="border: 1px solid rgba(239, 68, 68, 0.25);">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <div class="w-5 h-5 rounded-md bg-[#3A1414] text-[#EF4444] flex items-center justify-center">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </div>
+            <h2 class="text-sm lg:text-base font-semibold text-white">Recent Alerts</h2>
+          </div>
+          <a href="/v3/cases.html" class="text-xs text-[#8E9BAE] hover:text-[#00FF88] transition font-medium flex items-center gap-1">
+            <span>View All</span> <span>&rarr;</span>
+          </a>
+        </div>
+
+        <!-- Dynamic Alert Items List -->
+        <div id="recent-alerts-list" class="flex flex-col gap-3 min-h-[160px]">
+          <div class="p-4 text-center text-xs text-[#8E9BAE] skeleton">Loading active alerts...</div>
+        </div>
+
+        <div class="text-[10px] text-[#5A6678] mt-2 text-right data-as-of-caption">
+          Syncing with live API...
+        </div>
+
+      </div>
+
+      <!-- Right Card: Login Change Detection (7 cols) -->
+      <div id="lcd-card" class="glass-card lg:col-span-7 p-5 flex flex-col justify-between" style="border: 1px solid rgba(0, 255, 136, 0.35);">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <div class="w-5 h-5 rounded-md bg-[#0C2218] text-[#00FF88] flex items-center justify-center">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="22" y1="12" x2="18" y2="12"></line>
+                <line x1="6" y1="12" x2="2" y2="12"></line>
+                <line x1="12" y1="6" x2="12" y2="2"></line>
+                <line x1="12" y1="22" x2="12" y2="18"></line>
+              </svg>
+            </div>
+            <h2 class="text-sm lg:text-base font-semibold text-white">Login Change Detection</h2>
+          </div>
+
+          <!-- Dynamic Risk Score Badge -->
+          <div id="lcd-risk-badge" class="px-3 py-1 rounded-full bg-[#1A2E23] border border-[#00FF88] text-[#00FF88] font-bold text-xs font-mono tracking-tight">
+            Assessing...
+          </div>
+        </div>
+
+        <!-- 3-Column Comparison Grid / Container -->
+        <div id="lcd-body-container" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+          <div class="md:col-span-12 p-6 text-center text-xs text-[#8E9BAE] skeleton">
+            Analyzing recent identity session changes...
+          </div>
+        </div>
+
+        <div class="text-[10px] text-[#5A6678] mt-2 text-right data-as-of-caption">
+          Syncing with live API...
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ==================== CLIENT SCRIPT: LIVE DATA BINDINGS ==================== -->
+  <script>
+    // Safe text escaper
+    function esc(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const isMock = window.location.search.includes("mock=1");
+      const modeSuffix = isMock ? "· demo data" : "· live API";
+      
+      const updateCaptions = (timeStr) => {
+        document.querySelectorAll(".data-as-of-caption").forEach(el => {
+          el.textContent = `Data as of ${timeStr} UTC ${modeSuffix}`;
+        });
+      };
+
+      // 1. Fetch KPI Metrics
+      async function loadKpiData() {
+        try {
+          const [identRes, casesRes, perfRes, loginsRes, healthRes] = await Promise.all([
+            fetch('/api/v3/identities').then(r => r.ok ? r.json() : { items: [], total: 0 }),
+            fetch('/api/v3/cases').then(r => r.ok ? r.json() : { items: [], total: 0 }),
+            fetch('/api/v3/metrics/perf').then(r => r.ok ? r.json() : {}),
+            fetch('/api/v3/metrics/logins?bucket=day').then(r => r.ok ? r.json() : []),
+            fetch('/api/v3/health').then(r => r.ok ? r.json() : {})
+          ]);
+
+          // Simulator Pill
+          const simMode = healthRes.simulator || 'mock';
+          const simDot = document.getElementById('sim-topbar-dot');
+          const simText = document.getElementById('sim-topbar-text');
+          if (simDot && simText) {
+            if (simMode === 'supplied') {
+              simDot.className = 'w-2 h-2 rounded-full bg-[#00FF88]';
+              simDot.style.boxShadow = '0 0 6px #00FF88';
+              simText.textContent = 'supplied';
+              simText.className = 'text-[#00FF88]';
+            } else {
+              simDot.className = 'w-2 h-2 rounded-full bg-[#F59E0B]';
+              simDot.style.boxShadow = 'none';
+              simText.textContent = 'MOCK';
+              simText.className = 'text-[#F59E0B]';
+            }
+          }
+
+          // Identities Monitored
+          const idItems = identRes.items || [];
+          const totalIdentities = identRes.total !== undefined ? identRes.total : idItems.length;
+          const elevatedCount = idItems.filter(i => (i.identity_risk || 0) >= 60).length;
+          document.getElementById('kpi-ident-count').textContent = totalIdentities;
+          document.getElementById('kpi-ident-caption').textContent = `${elevatedCount} with risk \u2265 60`;
+
+          // Open Cases
+          const allCases = casesRes.items || [];
+          const openCases = allCases.filter(c => c.status === "open");
+          const openCount = openCases.length;
+          document.getElementById('kpi-cases-count').textContent = openCount;
+
+          const revokeCount = openCases.filter(c => c.band === "revoke").length;
+          const restrictCount = openCases.filter(c => c.band === "restrict").length;
+          const stepUpCount = openCases.filter(c => c.band === "step_up" || c.band === "step-up").length;
+          document.getElementById('kpi-cases-breakdown').textContent = 
+            `${revokeCount} revoke \u00B7 ${restrictCount} restrict \u00B7 ${stepUpCount} step-up`;
+
+          // Style Card 2 based on open threat presence
+          const caseCard = document.getElementById('card-open-cases');
+          const caseIconBox = document.getElementById('kpi-cases-icon-box');
+          const caseTag = document.getElementById('kpi-cases-tag');
+          const navBadge = document.getElementById('nav-open-cases-badge');
+
+          if (openCount > 0) {
+            caseCard.classList.remove('glass-card-green');
+            caseCard.classList.add('glass-card-red');
+            caseIconBox.classList.remove('bg-[#0C2218]', 'border-[#14422D]', 'text-[#00FF88]');
+            caseIconBox.classList.add('bg-[#3A1414]', 'border-[#6B1D1D]', 'text-[#EF4444]');
+            caseTag.className = "flex items-center gap-1 text-xs text-[#EF4444] font-semibold";
+            caseTag.textContent = "ELEVATED";
+            navBadge.textContent = openCount;
+            navBadge.classList.remove('opacity-0');
+          } else {
+            caseCard.classList.remove('glass-card-red');
+            caseCard.classList.add('glass-card-green');
+            caseTag.className = "flex items-center gap-1 text-xs text-[#00FF88] font-semibold";
+            caseTag.textContent = "NORMAL";
+            navBadge.classList.add('opacity-0');
+          }
+
+          // Logins Analysed
+          let totalLogins = 0;
+          let firstDate = "";
+          if (Array.isArray(loginsRes) && loginsRes.length > 0) {
+            totalLogins = loginsRes.reduce((acc, row) => acc + (row.total || 0), 0);
+            firstDate = loginsRes[0].t || "";
+          }
+          document.getElementById('kpi-logins-count').textContent = totalLogins;
+          document.getElementById('kpi-logins-caption').textContent = firstDate ? `since ${firstDate}` : "full data window";
+
+          // Decision Latency p95
+          const p95 = (perfRes.latencies && perfRes.latencies.receive_to_signal && perfRes.latencies.receive_to_signal.p95_ms) || perfRes.p95_ms;
+          if (p95 && p95 > 0) {
+            document.getElementById('kpi-latency-val').textContent = `${Math.round(p95)} ms`;
+            document.getElementById('kpi-latency-caption').textContent = "hot-path decision latency";
+          } else {
+            document.getElementById('kpi-latency-val').textContent = "\u2014";
+            document.getElementById('kpi-latency-caption').textContent = "run benchmark to measure";
+          }
+
+          // Render Recent Alerts list from Top Open Cases
+          renderRecentAlerts(openCases.length > 0 ? openCases : allCases);
+
+          // Render Login Change Detection panel from Top Case
+          renderLoginChangeDetection(openCases.length > 0 ? openCases[0] : (allCases[0] || null));
+
+          const now = new Date();
+          const timeStr = now.toISOString().slice(11, 19);
+          updateCaptions(timeStr);
+
+          const syncTimeEl = document.getElementById('last-sync-time');
+          if (syncTimeEl) {
+            let h = now.getHours();
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12 || 12;
+            syncTimeEl.textContent = `Last Sync: ${h}:${m} ${ampm}`;
+          }
+
+        } catch (err) {
+          console.error("Failed to load dashboard KPIs:", err);
+        }
+      }
+
+      // 2. Render Recent Alerts from Cases
+      function renderRecentAlerts(cases) {
+        const container = document.getElementById('recent-alerts-list');
+        if (!container) return;
+        if (!cases || cases.length === 0) {
+          container.innerHTML = `<div class="p-6 text-center text-xs text-[#8E9BAE]">No active threat cases \u00B7 All systems clear</div>`;
+          return;
+        }
+
+        const top5 = cases.slice(0, 3);
+        let html = '';
+        top5.forEach(c => {
+          const band = (c.band || "monitor").toUpperCase();
+          const isHigh = band === "REVOKE" || (c.session_risk || 0) >= 70;
+          const badgeClass = isHigh ? "bg-[#3B1414] text-[#EF4444] border-[#5E1E1E]" : "bg-[#33220E] text-[#F59E0B] border-[#5E3F17]";
+          const iconColor = isHigh ? "text-[#EF4444]" : "text-[#F59E0B]";
+          const reasonText = (c.reasons && c.reasons[0] && c.reasons[0].text) || "Suspicious session activity detected";
+
+          html += `
+            <a href="/v3/case.html?id=${esc(c.case_id)}" class="flex items-center justify-between p-3 rounded-lg bg-[#0A120E] border border-[#14261D] hover:border-[#00FF88] transition text-decoration-none block">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-[#18231C] ${iconColor} flex items-center justify-center shrink-0">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                </div>
+                <div class="flex flex-col">
+                  <span class="text-xs font-semibold text-white truncate max-w-[210px]">${esc(c.identity_id)}</span>
+                  <span class="text-[11px] text-[#8E9BAE] mt-0.5 truncate max-w-[210px]">${esc(reasonText)}</span>
+                </div>
+              </div>
+              <span class="px-2.5 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${badgeClass} border">
+                ${esc(band)}
+              </span>
+            </a>
+          `;
+        });
+        container.innerHTML = html;
+      }
+
+      // 3. Render Login Change Detection Panel
+      function renderLoginChangeDetection(topCase) {
+        const badge = document.getElementById('lcd-risk-badge');
+        const container = document.getElementById('lcd-body-container');
+        const card = document.getElementById('lcd-card');
+        if (!container || !badge) return;
+
+        if (!topCase) {
+          badge.className = "px-3 py-1 rounded-full bg-[#14261D] border border-[#10B981] text-[#10B981] font-bold text-xs font-mono";
+          badge.textContent = "Risk Score: 0%";
+          container.innerHTML = `
+            <div class="md:col-span-12 p-6 rounded-lg bg-[#0A120E] border border-[#14231B] text-center text-xs text-[#8E9BAE]">
+              No anomalous login changes detected \u00B7 Identity baselines stable
+            </div>
+          `;
+          return;
+        }
+
+        const score = Math.round(topCase.session_risk || 0);
+        const isCritical = score >= 70;
+        badge.className = isCritical 
+          ? "px-3 py-1 rounded-full bg-[#2E1214] border border-[#EF4444] text-[#EF4444] font-bold text-xs font-mono"
+          : "px-3 py-1 rounded-full bg-[#2A2312] border border-[#F59E0B] text-[#F59E0B] font-bold text-xs font-mono";
+        badge.textContent = `Risk Score: ${score}%`;
+
+        // Extract chain steps if available
+        const chain = topCase.chain || [];
+        const step1 = chain[0] || {};
+        const step2 = chain[chain.length - 1] || {};
+
+        container.innerHTML = `
+          <div class="md:col-span-4 p-3.5 rounded-lg bg-[#0A120E] border border-[#14231B] flex flex-col gap-2">
+            <span class="text-xs font-semibold text-[#8E9BAE] pb-1 border-b border-[#14231B]">Baseline Activity</span>
+            <div class="flex flex-col gap-1.5 text-xs">
+              <div class="flex items-center gap-2">
+                <span class="text-[#8E9BAE]">\u2022 Identity</span>
+                <span class="text-white font-medium ml-auto truncate">: ${esc(topCase.identity_id)}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[#8E9BAE]">\u2022 Session</span>
+                <span class="text-white font-mono ml-auto truncate">: ${esc(topCase.session_id || 'Active')}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[#8E9BAE]">\u2022 Action</span>
+                <span class="text-white font-medium ml-auto truncate">: ${esc(step1.action || 'user.session.start')}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[#8E9BAE]">\u2022 Status</span>
+                <span class="text-[#00FF88] font-semibold ml-auto">: Verified</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[#8E9BAE]">\u2022 Stage</span>
+                <span class="text-white font-mono ml-auto">: Baseline</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="md:col-span-1 flex items-center justify-center py-2 md:py-0">
+            <div class="chevron-pulse text-[#EF4444] font-bold text-xl flex items-center justify-center">
+              <svg class="w-6 h-6 text-[#EF4444]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="13 17 18 12 13 7"></polyline>
+                <polyline points="6 17 11 12 6 7"></polyline>
+              </svg>
+            </div>
+          </div>
+
+          <div class="md:col-span-4 p-3.5 rounded-lg bg-[#0A120E] border border-[#14231B] flex flex-col gap-2">
+            <span class="text-xs font-semibold text-[#8E9BAE] pb-1 border-b border-[#14231B]">Observed Anomaly</span>
+            <div class="flex flex-col gap-1.5 text-xs">
+              <div class="flex items-center gap-2">
+                <span class="text-[#8E9BAE]">\u2022 Detected</span>
+                <span class="text-[#EF4444] font-medium ml-auto truncate">: ${esc(topCase.band || 'elevated')}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[#8E9BAE]">\u2022 Last Action</span>
+                <span class="text-white font-medium ml-auto truncate">: ${esc(step2.action || 'High-Risk Operation')}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[#8E9BAE]">\u2022 Resource</span>
+                <span class="text-white font-mono ml-auto truncate">: ${esc((step2.resource || 'iam / s3').slice(0, 18))}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[#8E9BAE]">\u2022 Confidence</span>
+                <span class="text-[#EF4444] font-semibold ml-auto">: ${Math.round((topCase.confidence || 0.95) * 100)}%</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[#8E9BAE]">\u2022 Time</span>
+                <span class="text-white font-mono ml-auto truncate">: ${esc((step2.time || topCase.created_at || '').slice(11, 19))}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="md:col-span-3 p-3.5 rounded-lg bg-[#1F1012] border border-[#EF4444] flex flex-col items-center justify-between text-center gap-2" style="box-shadow: 0 0 16px rgba(239, 68, 68, 0.2);">
+            <div class="w-8 h-8 rounded-full bg-[#381416] text-[#EF4444] flex items-center justify-center">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </div>
+            <div class="flex flex-col">
+              <span class="text-xs font-bold text-[#EF4444]">Threat Escalation</span>
+              <span class="text-[10px] text-[#A1A1AA] mt-1 leading-tight">Session pattern triggers Zero-Trust containment.</span>
+            </div>
+            <a href="/v3/case.html?id=${esc(topCase.case_id)}" class="w-full mt-1 py-1.5 px-3 rounded-md bg-[#2B1013] border border-[#EF4444] text-[#EF4444] hover:bg-[#EF4444] hover:text-white transition text-xs font-semibold flex items-center justify-center gap-1.5 group cursor-pointer text-decoration-none">
+              <span>Investigate</span>
+              <span class="group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+            </a>
+          </div>
+        `;
+      }
+
+      // 4. Initialize Live Chart.js
+      let chartInstance = null;
+      async function loadLoginChart(bucket) {
+        const skeleton = document.getElementById('chart-skeleton');
+        try {
+          const res = await fetch(`/api/v3/metrics/logins?bucket=${bucket}`);
+          const data = res.ok ? await res.json() : [];
+
+          if (skeleton) skeleton.classList.add('hidden');
+
+          const labels = data.map(d => bucket === 'hour' ? d.t.slice(11, 16) : d.t.slice(5));
+          const normalSeries = data.map(d => Math.max(0, (d.total || 0) - (d.suspicious || 0)));
+          const suspiciousSeries = data.map(d => d.suspicious || 0);
+
+          const ctx = document.getElementById('loginActivityChart').getContext('2d');
+          const greenGrad = ctx.createLinearGradient(0, 0, 0, 220);
+          greenGrad.addColorStop(0, 'rgba(0, 255, 136, 0.28)');
+          greenGrad.addColorStop(1, 'rgba(0, 255, 136, 0.0)');
+
+          const redGrad = ctx.createLinearGradient(0, 0, 0, 220);
+          redGrad.addColorStop(0, 'rgba(239, 68, 68, 0.35)');
+          redGrad.addColorStop(1, 'rgba(239, 68, 68, 0.0)');
+
+          if (chartInstance) {
+            chartInstance.destroy();
+          }
+
+          chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: labels.length > 0 ? labels : ['00:00', '06:00', '12:00', '18:00', '24:00'],
+              datasets: [
+                {
+                  label: 'Normal Logins',
+                  data: normalSeries.length > 0 ? normalSeries : [0, 0, 0, 0, 0],
+                  borderColor: '#00FF88',
+                  borderWidth: 2.2,
+                  backgroundColor: greenGrad,
+                  fill: true,
+                  tension: 0.35,
+                  pointRadius: data.length > 30 ? 0 : 3,
+                  pointHoverRadius: 5,
+                  pointHoverBackgroundColor: '#00FF88',
+                },
+                {
+                  label: 'Suspicious Logins',
+                  data: suspiciousSeries.length > 0 ? suspiciousSeries : [0, 0, 0, 0, 0],
+                  borderColor: '#EF4444',
+                  borderWidth: 2.2,
+                  backgroundColor: redGrad,
+                  fill: true,
+                  tension: 0.25,
+                  pointRadius: data.length > 30 ? 0 : 3,
+                  pointHoverRadius: 6,
+                  pointHoverBackgroundColor: '#EF4444',
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              plugins: { legend: { display: false } },
+              scales: {
+                x: {
+                  grid: { display: false },
+                  ticks: { color: '#64748B', font: { size: 10 } }
+                },
+                y: {
+                  beginAtZero: true,
+                  grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                  ticks: { color: '#64748B', font: { size: 10 } }
+                }
+              }
+            }
+          });
+        } catch (e) {
+          console.error("Failed to render chart:", e);
+        }
+      }
+
+      // 5. Global Map Points from Geo Endpoint
+      async function loadMapPoints() {
+        const container = document.getElementById('dynamic-map-points');
+        if (!container) return;
+        try {
+          const [geoRes, casesRes] = await Promise.all([
+            fetch('/api/v3/geo/logins').then(r => r.ok ? r.json() : { points: [] }),
+            fetch('/api/v3/cases').then(r => r.ok ? r.json() : { items: [] })
+          ]);
+
+          const points = geoRes.points || [];
+          const threatIdentities = new Set((casesRes.items || []).filter(c => c.status === "open").map(c => c.identity_id));
+
+          let html = '';
+          const seenLocations = new Set();
+
+          points.forEach(pt => {
+            const lat = Number(pt.lat);
+            const lon = Number(pt.lon);
+            if (isNaN(lat) || isNaN(lon) || (lat === 0 && lon === 0)) return;
+
+            // Simple Equirectangular projection mapping
+            const x = Math.max(2, Math.min(98, ((lon + 180) / 360) * 100));
+            const y = Math.max(5, Math.min(95, ((90 - lat) / 180) * 100));
+
+            const locKey = `${x.toFixed(1)},${y.toFixed(1)}`;
+            if (seenLocations.has(locKey)) return;
+            seenLocations.add(locKey);
+
+            const isThreatLocation = threatIdentities.has(pt.identity_id);
+
+            if (isThreatLocation) {
+              html += `
+                <div class="absolute" style="top: ${y}%; left: ${x}%; width: 40px; height: 40px; transform: translate(-50%, -50%);" title="Active Threat: ${esc(pt.city)}, ${esc(pt.country)}">
+                  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-[#EF4444] z-10" style="box-shadow: 0 0 12px #EF4444;"></div>
+                  <div class="radar-circle w-6 h-6"></div>
+                  <div class="radar-circle w-10 h-10"></div>
+                </div>
+              `;
+            } else {
+              html += `
+                <div class="absolute" style="top: ${y}%; left: ${x}%; transform: translate(-50%, -50%);" title="Normal Login: ${esc(pt.city)}, ${esc(pt.country)}">
+                  <span class="w-2 h-2 rounded-full bg-[#00FF88] block" style="box-shadow: 0 0 6px #00FF88;"></span>
+                </div>
+              `;
+            }
+          });
+
+          container.innerHTML = html;
+        } catch (e) {
+          console.error("Failed to load map locations:", e);
+        }
+      }
+
+      // Initial execution
+      loadKpiData();
+      loadLoginChart('day');
+      loadMapPoints();
+
+      // Filter listener
+      const timeSelect = document.getElementById('time-range-select');
+      if (timeSelect) {
+        timeSelect.addEventListener('change', (e) => {
+          loadLoginChart(e.target.value);
+        });
+      }
+
+      // 6. Direct JSON Log Upload & Drag-and-Drop
+      function showToast(message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        const borderColor = type === 'success' ? '#00FF88' : type === 'error' ? '#EF4444' : '#3B82F6';
+        toast.className = `flex items-center gap-3 px-4 py-3 rounded-lg bg-[#0E1713]/95 border text-xs text-white shadow-xl pointer-events-auto transition-all transform translate-y-2 opacity-0`;
+        toast.style.borderColor = borderColor;
+        toast.style.boxShadow = `0 4px 20px rgba(0,0,0,0.6), 0 0 10px ${borderColor}33`;
+        toast.innerHTML = `
+          <span class="w-2 h-2 rounded-full" style="background: ${borderColor}; box-shadow: 0 0 6px ${borderColor};"></span>
+          <span class="font-medium">${esc(message)}</span>
+        `;
+        container.appendChild(toast);
+        requestAnimationFrame(() => {
+          toast.classList.remove('translate-y-2', 'opacity-0');
+        });
+        setTimeout(() => {
+          toast.classList.add('opacity-0', '-translate-y-2');
+          setTimeout(() => toast.remove(), 300);
+        }, 4000);
+      }
+
+      async function uploadLogFile(file) {
+        if (!file) return;
+        const uploadBtnLabel = document.getElementById('upload-btn-label');
+        if (uploadBtnLabel) uploadBtnLabel.textContent = `Scanning ${file.name}...`;
+        showToast(`Uploading & analyzing ${file.name}...`, 'info');
+
+        try {
+          const content = await file.text();
+          // Validate JSON structure
+          try {
+            JSON.parse(content);
+          } catch (e) {
+            throw new Error(`File is not valid JSON: ${e.message}`);
+          }
+
+          // 1. Send to inputs upload endpoint
+          const res = await fetch('/api/inputs/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: content, source: 'auto', filename: file.name })
+          });
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || 'Upload failed');
+          }
+
+          const data = await res.json();
+          const acceptedCt = data.accepted ? (data.accepted.cloudtrail || 0) + (data.accepted.okta || 0) : 'all';
+
+          // 2. Trigger v3 dataset scan
+          await fetch('/api/v3/inputs/scan', { method: 'POST' }).catch(() => {});
+
+          showToast(`Successfully analyzed ${file.name} (${acceptedCt} records)!`, 'success');
+
+          // 3. Immediately refresh dashboard cards and maps
+          await loadKpiData();
+          await loadLoginChart('day');
+          await loadMapPoints();
+        } catch (err) {
+          console.error("Upload error:", err);
+          showToast(`Upload failed: ${err.message}`, 'error');
+        } finally {
+          if (uploadBtnLabel) uploadBtnLabel.textContent = 'Upload JSON Logs';
+        }
+      }
+
+      // Wire file input button in topbar
+      const fileInput = document.getElementById('dashboard-file-upload');
+      if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (file) {
+            uploadLogFile(file);
+            fileInput.value = '';
+          }
+        });
+      }
+
+      // Wire Dropzone Strip Click & File Input
+      const dropStrip = document.getElementById('dash-dropzone-strip');
+      const stripFileInput = document.getElementById('dash-strip-file-input');
+      if (dropStrip && stripFileInput) {
+        dropStrip.addEventListener('click', (e) => {
+          if (e.target !== stripFileInput) {
+            stripFileInput.click();
+          }
+        });
+        stripFileInput.addEventListener('change', (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (file) {
+            uploadLogFile(file);
+            stripFileInput.value = '';
+          }
+        });
+      }
+
+      // Wire Rock-Solid Full-Window Drag & Drop
+      const dropOverlay = document.getElementById('drop-overlay');
+
+      const preventDefaults = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      };
+
+      // 1. Prevent browser from opening file on drop
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+        window.addEventListener(evt, preventDefaults, false);
+        document.body.addEventListener(evt, preventDefaults, false);
+      });
+
+      // 2. Show drop overlay on dragover
+      ['dragenter', 'dragover'].forEach(evt => {
+        window.addEventListener(evt, (e) => {
+          preventDefaults(e);
+          if (e.dataTransfer) {
+            e.dataTransfer.dropEffect = 'copy';
+          }
+          if (dropOverlay) {
+            dropOverlay.style.display = 'flex';
+          }
+        }, false);
+      });
+
+      // 3. Hide overlay when dragged out of the window
+      window.addEventListener('dragleave', (e) => {
+        preventDefaults(e);
+        if (!e.relatedTarget && dropOverlay) {
+          dropOverlay.style.display = 'none';
+        }
+      }, false);
+
+      // 4. Capture drop
+      const onDropHandler = (e) => {
+        preventDefaults(e);
+        if (dropOverlay) {
+          dropOverlay.style.display = 'none';
+        }
+        const dt = e.dataTransfer;
+        if (!dt) return;
+        const files = dt.files;
+        if (files && files.length > 0) {
+          uploadLogFile(files[0]);
+        }
+      };
+
+      if (dropOverlay) {
+        dropOverlay.addEventListener('dragover', (e) => {
+          preventDefaults(e);
+          if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+        });
+        dropOverlay.addEventListener('dragleave', (e) => {
+          preventDefaults(e);
+          dropOverlay.style.display = 'none';
+        });
+        dropOverlay.addEventListener('drop', onDropHandler);
+      }
+
+      if (dropStrip) {
+        dropStrip.addEventListener('dragover', (e) => {
+          preventDefaults(e);
+          if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+        });
+        dropStrip.addEventListener('drop', onDropHandler);
+      }
+
+      window.addEventListener('drop', onDropHandler);
+
+      // Refresh every 30 seconds
+      setInterval(() => {
+        loadKpiData();
+        loadMapPoints();
+      }, 30000);
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IdentityShield · Settings</title>
+
+  <!-- Google Fonts & Shared Theme Tokens (Phase 1) -->
+  <link rel="stylesheet" href="/v3/assets/css/theme.css">
+  <link rel="stylesheet" href="/v3/assets/css/shell.css">
+  <link rel="stylesheet" href="/v3/assets/css/components.css">
+
+  <!-- Core Theme Styles -->
+  <script>try { const t = localStorage.getItem('identityshield_theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) { }</script>
+  <link rel="stylesheet" href="/v3/css/theme.css">
+  <link rel="stylesheet" href="/v3/css/motion.css">
+
+  <!-- Tailwind CSS -->
+  <link rel="stylesheet" href="/v3/css/tailwind.css">
+  <script src="/v3/assets/js/tailwind-theme.js"></script>
+
+  <style>
+    /* Slider green track styling */
+    input[type=range] {
+      accent-color: var(--green-500);
+    }
+  </style>
+</head>
+
+<body data-page="settings">
+
+  <aside id="is-sidebar"></aside>
+  <canvas id="bg3d-canvas" style="display:none;"></canvas>
+
+  <div class="is-main">
+    <header id="is-topbar"></header>
+
+    <main class="is-content" style="padding-bottom:100px;">
+      <div id="main-content"
+        style="display:flex; flex-direction:column; gap:24px; max-width:1400px; margin:0 auto; width:100%;">
+
+        <!-- 1. Page Header Block -->
+        <div class="is-page-head"
+          style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;">
+          <div>
+            <h1><span class="accent">Settings</span></h1>
+            <p>System configuration, detection thresholds, integrations, and governance</p>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <span class="status-pill">
+              <span class="status-dot ok"></span>
+              <span class="mono" style="font-size:11px;">SQLITE WAL SECURE STORE</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- 2. Dual Column Layout: Left Vertical Tabs + Right Tab Panes -->
+        <div style="display:grid; grid-template-columns:240px 1fr; gap:24px; align-items:flex-start;">
+
+          <!-- Left Vertical Tabs Navigation -->
+          <div class="card"
+            style="padding:12px; display:flex; flex-direction:column; gap:4px; position:sticky; top:100px;">
+            <button class="settings-nav-btn active" data-tab="tab-general" type="button"
+              style="display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; text-align:left; background:var(--green-700); color:var(--text-1); border:none; cursor:pointer;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+              <span>General &amp; Token</span>
+            </button>
+
+            <button class="settings-nav-btn" data-tab="tab-okta" type="button"
+              style="display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; text-align:left; background:transparent; color:var(--text-2); border:none; cursor:pointer;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+                <path d="M2 12h20" />
+              </svg>
+              <span>Okta Integration</span>
+            </button>
+
+            <button class="settings-nav-btn" data-tab="tab-thresholds" type="button"
+              style="display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; text-align:left; background:transparent; color:var(--text-2); border:none; cursor:pointer;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="4" y1="21" x2="4" y2="14" />
+                <line x1="4" y1="10" x2="4" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12" y2="3" />
+                <line x1="20" y1="21" x2="20" y2="16" />
+                <line x1="20" y1="12" x2="20" y2="3" />
+                <line x1="1" y1="14" x2="7" y2="14" />
+                <line x1="9" y1="8" x2="15" y2="8" />
+                <line x1="17" y1="16" x2="23" y2="16" />
+              </svg>
+              <span>Detection Thresholds</span>
+            </button>
+
+            <button class="settings-nav-btn" data-tab="tab-notifications" type="button"
+              style="display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; text-align:left; background:transparent; color:var(--text-2); border:none; cursor:pointer;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              <span>Notifications &amp; Webhooks</span>
+            </button>
+
+            <button class="settings-nav-btn" data-tab="tab-agents" type="button"
+              style="display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; text-align:left; background:transparent; color:var(--text-2); border:none; cursor:pointer;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                <polyline points="2 17 12 22 22 17" />
+                <polyline points="2 12 12 17 22 12" />
+              </svg>
+              <span>Agents Governance</span>
+            </button>
+
+            <button class="settings-nav-btn" data-tab="tab-appearance" type="button"
+              style="display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; text-align:left; background:transparent; color:var(--text-2); border:none; cursor:pointer;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5" />
+                <path
+                  d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+              </svg>
+              <span>Appearance</span>
+            </button>
+          </div>
+
+          <!-- Right Content Panes -->
+          <div style="display:flex; flex-direction:column; gap:20px;">
+
+            <!-- Tab 1: General & Token -->
+            <div id="tab-general" class="settings-pane card"
+              style="display:flex; flex-direction:column; gap:20px; padding:24px;">
+              <div>
+                <h3 class="card__title" style="font-size:16px;">Analyst Authorization Token</h3>
+                <div style="font-size:12px; color:var(--text-3); margin-top:2px;">
+                  Transmitted as <code>X-Analyst-Token</code> on mutating actions (case labeling, action approval,
+                  config rollback).
+                </div>
+              </div>
+
+              <div style="display:flex; gap:10px; max-width:640px;">
+                <input id="input-analyst-token" class="input mono" type="password"
+                  placeholder="Enter secret analyst token..." style="flex:1; font-size:12px;" />
+                <button id="btn-save-token" class="btn btn--primary" type="button"
+                  style="font-size:12px; padding:8px 16px;">Save Token</button>
+                <button id="btn-clear-token" class="btn btn--ghost" type="button"
+                  style="font-size:12px; padding:8px 14px;">Clear</button>
+              </div>
+
+              <div style="border-top:1px solid var(--border-1); padding-top:20px;">
+                <h3 class="card__title" style="font-size:16px;">Autonomous Action Mode</h3>
+                <div style="font-size:12px; color:var(--text-3); margin-top:2px;">
+                  Configure whether containment playbooks execute autonomously or require two-analyst sign-off.
+                </div>
+                <div style="display:flex; gap:16px; margin-top:12px;">
+                  <label
+                    style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-1); cursor:pointer;">
+                    <input type="radio" name="action_mode" value="supervised" checked
+                      style="accent-color:var(--green-500);" />
+                    <span>Supervised Approval (Recommended for Production)</span>
+                  </label>
+                  <label
+                    style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-1); cursor:pointer;">
+                    <input type="radio" name="action_mode" value="autonomous" style="accent-color:var(--green-500);" />
+                    <span>Full Autonomous Containment</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Config Versions & Rollback Card -->
+              <div style="border-top:1px solid var(--border-1); padding-top:20px;">
+                <div class="card__head" style="margin-bottom:12px;">
+                  <div>
+                    <h3 class="card__title" style="font-size:15px;">Tuned Scoring Weight Versions</h3>
+                    <div style="font-size:12px; color:var(--text-3); margin-top:2px;">Managed by Agent 15 Feedback &amp;
+                      Tuning with one-click rollback</div>
+                  </div>
+                  <span class="badge neutral mono" style="font-size:10px;">VERSIONED</span>
+                </div>
+                <div id="config-versions-list" style="display:flex; flex-direction:column; gap:8px;">
+                  <div class="skeleton" style="height:48px; width:100%;"></div>
+                  <div class="skeleton" style="height:48px; width:100%;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab 2: Okta Integration -->
+            <div id="tab-okta" class="settings-pane card"
+              style="display:none; flex-direction:column; gap:20px; padding:24px;">
+              <div>
+                <h3 class="card__title" style="font-size:16px;">Okta SysLog API Connection</h3>
+                <div style="font-size:12px; color:var(--text-3); margin-top:2px;">Real-time event polling and webhook
+                  reception configuration</div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div>
+                  <label class="mono muted" style="font-size:11px; display:block; margin-bottom:6px;">OKTA
+                    DOMAIN</label>
+                  <input class="input mono" type="text" value="https://dev-okta.corp.example.com"
+                    style="width:100%; font-size:12px;" />
+                </div>
+                <div>
+                  <label class="mono muted" style="font-size:11px; display:block; margin-bottom:6px;">API TOKEN
+                    (ENCRYPTED)</label>
+                  <input class="input mono" type="password" value="okta_sec_token_vault_099182"
+                    style="width:100%; font-size:12px;" />
+                </div>
+              </div>
+
+              <div
+                style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-1); padding-top:16px;">
+                <div>
+                  <div style="font-weight:600; color:var(--text-1); font-size:13px;">Enable Polling Worker (10s cadence)
+                  </div>
+                  <div style="font-size:12px; color:var(--text-3);">Agent 01 Collector pulls /api/v1/logs continuously
+                  </div>
+                </div>
+                <input type="checkbox" checked
+                  style="accent-color:var(--green-500); width:18px; height:18px; cursor:pointer;" />
+              </div>
+            </div>
+
+            <!-- Tab 3: Detection Thresholds -->
+            <div id="tab-thresholds" class="settings-pane card"
+              style="display:none; flex-direction:column; gap:20px; padding:24px;">
+              <div>
+                <h3 class="card__title" style="font-size:16px;">Detection Escalation Thresholds</h3>
+                <div style="font-size:12px; color:var(--text-3); margin-top:2px;">Threshold cutoffs for autonomous
+                  response escalations</div>
+              </div>
+
+              <div style="display:flex; flex-direction:column; gap:20px;">
+                <div>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-weight:600; color:var(--text-1); font-size:13px;">Step-Up MFA Threshold</span>
+                    <span id="label-step-up" class="mono accent" style="font-size:13px; font-weight:700;">50 /
+                      100</span>
+                  </div>
+                  <input id="slider-step-up" type="range" min="20" max="80" value="50" style="width:100%;" />
+                  <div style="font-size:11px; color:var(--text-3); margin-top:2px;">Prompts user for biometrics / FIDO2
+                    security key</div>
+                </div>
+
+                <div>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-weight:600; color:var(--text-1); font-size:13px;">Restrict Permissions
+                      Threshold</span>
+                    <span id="label-restrict" class="mono accent" style="font-size:13px; font-weight:700;">70 /
+                      100</span>
+                  </div>
+                  <input id="slider-restrict" type="range" min="40" max="90" value="70" style="width:100%;" />
+                  <div style="font-size:11px; color:var(--text-3); margin-top:2px;">Detaches admin roles and applies IAM
+                    quarantine policy</div>
+                </div>
+
+                <div>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-weight:600; color:var(--text-1); font-size:13px;">Immediate Revocation
+                      Threshold</span>
+                    <span id="label-revoke" class="mono text-danger" style="font-size:13px; font-weight:700;">90 /
+                      100</span>
+                  </div>
+                  <input id="slider-revoke" type="range" min="70" max="100" value="90" style="width:100%;" />
+                  <div style="font-size:11px; color:var(--text-3); margin-top:2px;">Terminates all active sessions,
+                    deletes temporary STS tokens</div>
+                </div>
+              </div>
+
+              <!-- Proposed Suppressions -->
+              <div style="border-top:1px solid var(--border-1); padding-top:20px;">
+                <div class="card__head" style="margin-bottom:12px;">
+                  <div>
+                    <h3 class="card__title" style="font-size:15px;">Proposed Rule Suppressions</h3>
+                    <div style="font-size:12px; color:var(--text-3); margin-top:2px;">Pending analyst review to reduce
+                      false alarms</div>
+                  </div>
+                </div>
+                <div id="suppressions-list" style="display:flex; flex-direction:column; gap:8px;">
+                  <!-- Populated from settings.js -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab 4: Notifications & Webhooks -->
+            <div id="tab-notifications" class="settings-pane card"
+              style="display:none; flex-direction:column; gap:20px; padding:24px;">
+              <div>
+                <h3 class="card__title" style="font-size:16px;">Alert Notifications &amp; Webhooks</h3>
+                <div style="font-size:12px; color:var(--text-3); margin-top:2px;">Real-time incident dispatch
+                  destinations</div>
+              </div>
+
+              <div style="display:flex; flex-direction:column; gap:14px;">
+                <div>
+                  <label class="mono muted" style="font-size:11px; display:block; margin-bottom:6px;">PAGERDUTY
+                    INTEGRATION KEY</label>
+                  <input class="input mono" type="text" placeholder="pd-secops-key-abc123"
+                    style="width:100%; font-size:12px;" />
+                </div>
+                <div>
+                  <label class="mono muted" style="font-size:11px; display:block; margin-bottom:6px;">SLACK SECURITY
+                    WEBHOOK URL</label>
+                  <input class="input mono" type="text" placeholder="https://hooks.slack.com/services/..."
+                    style="width:100%; font-size:12px;" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab 5: Agents Governance -->
+            <div id="tab-agents" class="settings-pane card"
+              style="display:none; flex-direction:column; gap:20px; padding:24px;">
+              <div>
+                <h3 class="card__title" style="font-size:16px;">Agent Fleet Tuning &amp; Telemetry</h3>
+                <div style="font-size:12px; color:var(--text-3); margin-top:2px;">Control supervisor polling intervals
+                  and worker memory budgets</div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div>
+                  <label class="mono muted" style="font-size:11px; display:block; margin-bottom:6px;">HEARTBEAT
+                    FREQUENCY</label>
+                  <select class="select" style="width:100%; font-size:12px;">
+                    <option value="2">2 seconds (High responsiveness)</option>
+                    <option value="5">5 seconds (Standard)</option>
+                    <option value="10">10 seconds (Low resource)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="mono muted" style="font-size:11px; display:block; margin-bottom:6px;">MAX MEMORY PER
+                    WORKER</label>
+                  <select class="select" style="width:100%; font-size:12px;">
+                    <option value="256">256 MB</option>
+                    <option value="512" selected>512 MB</option>
+                    <option value="1024">1024 MB</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab 6: Appearance -->
+            <div id="tab-appearance" class="settings-pane card"
+              style="display:none; flex-direction:column; gap:20px; padding:24px;">
+              <div>
+                <h3 class="card__title" style="font-size:16px;">Console Appearance Theme</h3>
+                <div style="font-size:12px; color:var(--text-3); margin-top:2px;">Select dark command console or
+                  high-contrast light mode</div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <label id="theme-card-dark" class="card"
+                  style="padding:16px; cursor:pointer; border:2px solid var(--green-500); display:flex; flex-direction:column; gap:8px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:700; color:var(--text-1); font-size:14px;">Dark (Default)</span>
+                    <input type="radio" name="settings_theme" value="dark" checked
+                      style="accent-color:var(--green-500);" />
+                  </div>
+                  <div style="font-size:12px; color:var(--text-3);">
+                    Deep black command console with neon green accents and glow.
+                  </div>
+                </label>
+
+                <label id="theme-card-light" class="card"
+                  style="padding:16px; cursor:pointer; border:1px solid var(--border-1); display:flex; flex-direction:column; gap:8px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:700; color:var(--text-1); font-size:14px;">Light Mode</span>
+                    <input type="radio" name="settings_theme" value="light" style="accent-color:var(--green-500);" />
+                  </div>
+                  <div style="font-size:12px; color:var(--text-3);">
+                    Clean pale background for bright environments with matching brand accents.
+                  </div>
+                </label>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Sticky Save Bar at Bottom -->
+  <div
+    style="position:fixed; bottom:0; left:var(--sidebar-w); right:0; background:rgba(7, 12, 10, 0.92); backdrop-filter:blur(12px); border-top:1px solid var(--border-2); padding:14px 32px; display:flex; justify-content:space-between; align-items:center; z-index:90;">
+    <div style="font-size:12px; color:var(--text-3);">
+      All modifications are serialized to SQLite WAL store and versioned cryptographically.
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button id="btn-cancel-settings" class="btn btn--ghost" type="button" style="font-size:12px; padding:8px 16px;">
+        Discard Changes
+      </button>
+      <button id="btn-save-settings" class="btn btn--primary" type="button" style="font-size:12px; padding:8px 24px;">
+        Save Settings
+      </button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/v3/assets/js/shell.js"></script>
+  <script type="module" src="/v3/js/pages/settings.js"></script>
+</body>
+
+</html>

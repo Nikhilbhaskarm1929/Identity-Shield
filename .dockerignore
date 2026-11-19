@@ -1,0 +1,30 @@
+# Git & Environment
+.git
+.gitignore
+.venv
+venv/
+ENV/
+env/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+
+# Testing & Linting
+.pytest_cache/
+.ruff_cache/
+tests/
+tools/tailwindcss-windows-x64.exe
+
+# Backups
+.mem30_backup/
+.v21_backup/
+*.bak
+
+# Temporary/OS files
+.DS_Store
+Thumbs.db

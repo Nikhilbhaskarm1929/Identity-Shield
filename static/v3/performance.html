@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IdentityShield · System Performance</title>
+
+  <!-- Google Fonts & Shared Theme Tokens (Phase 1) -->
+  <link rel="stylesheet" href="/v3/assets/css/theme.css">
+  <link rel="stylesheet" href="/v3/assets/css/shell.css">
+  <link rel="stylesheet" href="/v3/assets/css/components.css">
+
+  <!-- Core Theme Styles -->
+  <script>try { const t = localStorage.getItem('identityshield_theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) { }</script>
+  <link rel="stylesheet" href="/v3/css/theme.css">
+  <link rel="stylesheet" href="/v3/css/motion.css">
+
+  <!-- Tailwind CSS -->
+  <link rel="stylesheet" href="/v3/css/tailwind.css">
+  <script src="/v3/assets/js/tailwind-theme.js"></script>
+
+  <!-- Vendored Chart.js & Charts Theme -->
+  <script src="/vendor/chart.umd.min.js"></script>
+  <script src="/v3/assets/js/charts-theme.js"></script>
+</head>
+<body data-page="performance">
+
+  <aside id="is-sidebar"></aside>
+  <canvas id="bg3d-canvas" style="display:none;"></canvas>
+  <button id="btn-run-benchmark" style="display:none;"></button>
+  <div id="tile-hot-p50" style="display:none;"></div>
+
+  <div class="is-main">
+    <header id="is-topbar"></header>
+
+    <main class="is-content">
+      <div id="main-content" style="display:flex; flex-direction:column; gap:24px; max-width:1600px; margin:0 auto; width:100%;">
+
+        <!-- 1. Page Header Block & Benchmark Controls -->
+        <div class="is-page-head" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;">
+          <div>
+            <h1>System <span class="accent">Performance</span></h1>
+            <p>Runtime throughput, sub-millisecond pipeline latency, and resource utilization</p>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <select id="select-bench-multiplier" class="select" style="min-width:160px;">
+              <option value="1">1x Scale (14.2k)</option>
+              <option value="5">5x Burst (71k)</option>
+              <option value="10">10x Stress (142k)</option>
+            </select>
+            <button id="btn-run-benchmark" class="btn btn--primary" type="button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+              <span id="btn-bench-text">Run Benchmark</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. KPI Metrics Row (EPS, Avg Latency, Agent CPU, Queue Depth) -->
+        <section class="grid-kpi" id="perf-kpi-row">
+          <!-- Tile 1: Throughput EPS -->
+          <div class="kpi" id="kpi-eps-card">
+            <div class="kpi__top">
+              <div class="kpi__left">
+                <div class="kpi__icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </div>
+                <div>
+                  <div class="kpi__value" id="tile-eps-val">1,450</div>
+                  <div class="kpi__label">Throughput (EPS)</div>
+                </div>
+              </div>
+              <span class="kpi__delta up">&uarr; Peak 2.4k</span>
+            </div>
+            <div class="kpi__spark">
+              <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="perf-spark-1" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--green-500)" stop-opacity="0.35"/>
+                    <stop offset="100%" stop-color="var(--green-500)" stop-opacity="0.0"/>
+                  </linearGradient>
+                </defs>
+                <path d="M0,24 Q50,14 100,20 T200,8 L200,36 L0,36 Z" fill="url(#perf-spark-1)"/>
+                <path d="M0,24 Q50,14 100,20 T200,8" fill="none" stroke="var(--green-500)" stroke-width="2"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Tile 2: Avg Pipeline Latency -->
+          <div class="kpi" id="kpi-latency-card">
+            <div class="kpi__top">
+              <div class="kpi__left">
+                <div class="kpi__icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div>
+                  <div class="kpi__value" id="tile-latency-val">8.2 ms</div>
+                  <div class="kpi__label">Avg Pipeline Latency</div>
+                </div>
+              </div>
+              <span class="kpi__delta up">&lt; 50ms SLA</span>
+            </div>
+            <div class="kpi__spark">
+              <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+                <path d="M0,16 Q40,24 80,18 T160,20 T200,10 L200,36 L0,36 Z" fill="url(#perf-spark-1)"/>
+                <path d="M0,16 Q40,24 80,18 T160,20 T200,10" fill="none" stroke="var(--green-500)" stroke-width="2"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Tile 3: Agent CPU Utilization -->
+          <div class="kpi" id="kpi-cpu-card">
+            <div class="kpi__top">
+              <div class="kpi__left">
+                <div class="kpi__icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/></svg>
+                </div>
+                <div>
+                  <div class="kpi__value" id="tile-cpu-val">14.2%</div>
+                  <div class="kpi__label">Agent CPU Usage</div>
+                </div>
+              </div>
+              <span class="kpi__delta up">Normal</span>
+            </div>
+            <div class="kpi__spark">
+              <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+                <path d="M0,22 Q50,18 100,24 T200,14 L200,36 L0,36 Z" fill="url(#perf-spark-1)"/>
+                <path d="M0,22 Q50,18 100,24 T200,14" fill="none" stroke="var(--green-500)" stroke-width="2"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Tile 4: Queue Depth -->
+          <div class="kpi" id="kpi-queue-card">
+            <div class="kpi__top">
+              <div class="kpi__left">
+                <div class="kpi__icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                </div>
+                <div>
+                  <div class="kpi__value" id="tile-queue-val">0</div>
+                  <div class="kpi__label">Queue Depth (Lag)</div>
+                </div>
+              </div>
+              <span class="kpi__delta up">&check; Real-time</span>
+            </div>
+            <div class="kpi__spark">
+              <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+                <path d="M0,28 Q50,26 100,28 T200,26 L200,36 L0,36 Z" fill="url(#perf-spark-1)"/>
+                <path d="M0,28 Q50,26 100,28 T200,26" fill="none" stroke="var(--green-500)" stroke-width="2"/>
+              </svg>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. Dual Charts Row: Throughput Over Time (Area) & Error Rate (Red Line) -->
+        <div class="grid-2-1">
+          <!-- Card: Throughput Profile (Area) -->
+          <div class="card">
+            <div class="card__head">
+              <h2 class="card__title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Throughput Over Time (EPS)
+              </h2>
+              <div class="card__actions">
+                <span class="mono text-accent" style="font-size:12px; font-weight:700;">PEAK: 2,400 EPS</span>
+              </div>
+            </div>
+            <div class="card__body" style="height:250px;">
+              <canvas id="chart-throughput-line"></canvas>
+            </div>
+          </div>
+
+          <!-- Card: Error Rate (Red Line) -->
+          <div class="card">
+            <div class="card__head">
+              <h3 class="card__title" style="font-size:16px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Pipeline Error Rate
+              </h3>
+              <span class="badge low">0.00%</span>
+            </div>
+            <div class="card__body" style="height:250px;">
+              <canvas id="chart-error-rate"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Latency Per Agent & Service Bus Status Table -->
+        <div class="grid-2-1">
+          <!-- Left: Latency per Agent (Horizontal Bars) -->
+          <div class="card">
+            <div class="card__head">
+              <h3 class="card__title" style="font-size:16px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Latency per Agent Primitive
+              </h3>
+              <span class="mono muted" style="font-size:11px;">MILLIS (MS)</span>
+            </div>
+            <div class="card__body" style="height:280px;">
+              <canvas id="chart-agent-latency"></canvas>
+            </div>
+          </div>
+
+          <!-- Right: Service Pipeline Status Table with .pill -->
+          <div class="card" style="padding:0; overflow:hidden;">
+            <div class="card__head" style="padding:20px 24px 14px 24px; margin-bottom:0;">
+              <h3 class="card__title" style="font-size:16px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                Pipeline Service Status
+              </h3>
+              <span class="pill" style="height:26px; padding:0 8px;"><span class="pill__dot ok"></span> 8 Healthy</span>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Service / Queue</th>
+                    <th>Capacity</th>
+                    <th>Depth</th>
+                    <th style="text-align:right;">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="services-table-body">
+                  <tr><td colspan="4"><div class="skeleton" style="height:32px; margin:6px 12px;"></div></td></tr>
+                  <tr><td colspan="4"><div class="skeleton" style="height:32px; margin:6px 12px;"></div></td></tr>
+                  <tr><td colspan="4"><div class="skeleton" style="height:32px; margin:6px 12px;"></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Benchmark Results Log Card -->
+        <div class="card">
+          <div class="card__head">
+            <h3 class="card__title" style="font-size:16px;">Last Benchmark Run Report</h3>
+            <span id="bench-timestamp" class="mono muted" style="font-size:12px;">Latest run: 2026-10-30 14:35 UTC</span>
+          </div>
+          <div id="bench-details-card" style="padding:16px; background:var(--surface-2); border:1px solid var(--border-1); border-radius:var(--radius-md); font-family:var(--font-mono); font-size:13px; color:var(--text-1); line-height:1.7;">
+            <div>Scale Factor: <strong>1x Baseline (14,200 events)</strong></div>
+            <div>Elapsed Run Time: <strong>1,248.5 ms</strong></div>
+            <div>Average Sustained Ingestion: <strong>1,450.0 EPS</strong></div>
+            <div>Total Signals Fused: <strong>71 signals</strong> &rarr; <strong>3 threat cases</strong></div>
+            <div>Host Environment: <strong>Windows x64 / Python 3.12 / SQLite WAL Mode</strong></div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/v3/assets/js/shell.js"></script>
+  <script type="module" src="/v3/js/pages/performance.js"></script>
+</body>
+</html>

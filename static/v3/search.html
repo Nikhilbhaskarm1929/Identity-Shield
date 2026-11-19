@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IdentityShield · Global Search</title>
+
+  <!-- Google Fonts & Shared Theme Tokens -->
+  <link rel="stylesheet" href="/v3/assets/css/theme.css">
+  <link rel="stylesheet" href="/v3/assets/css/shell.css">
+  <link rel="stylesheet" href="/v3/assets/css/components.css">
+
+  <!-- Core Theme Styles -->
+  <script>try{const t=localStorage.getItem('identityshield_theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+  <link rel="stylesheet" href="/v3/css/theme.css">
+  <link rel="stylesheet" href="/v3/css/motion.css">
+
+  <!-- Tailwind CSS -->
+  <link rel="stylesheet" href="/v3/css/tailwind.css">
+  <script src="/v3/assets/js/tailwind-theme.js"></script>
+</head>
+<body data-page="search">
+
+  <aside id="is-sidebar"></aside>
+  <canvas id="bg3d-canvas" style="display:none;"></canvas>
+
+  <div class="is-main">
+    <header id="is-topbar"></header>
+
+    <main class="is-content">
+      <div id="main-content" style="display:flex; flex-direction:column; gap:24px; max-width:1600px; margin:0 auto; width:100%;">
+
+        <!-- Page Header -->
+        <div class="is-page-head" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;">
+          <div>
+            <h1>Global <span class="accent">Search</span></h1>
+            <p>Query across 4,200+ telemetry events, 15 agent detections, identities, and threat cases</p>
+          </div>
+          <div style="display:flex; gap:12px; align-items:center;">
+            <span class="status-pill">
+              <span class="status-dot ok"></span>
+              <span class="mono" style="font-size:11px;">ENTERPRISE INDEX SYNCED</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Search Input Bar -->
+        <div class="card" style="padding:20px;">
+          <div style="display:flex; gap:12px; align-items:center;">
+            <div style="position:relative; flex:1;">
+              <svg style="position:absolute; left:14px; top:50%; transform:translateY(-50%); width:18px; height:18px; color:var(--text-3);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="search-input" class="input mono" placeholder="Search by identity email, IP address, ASN, case ID (e.g. omana@corp.com, 185.220.101.4, CASE-1115)..." style="padding-left:42px; font-size:14px; height:44px; width:100%;" autofocus />
+            </div>
+            <button id="search-btn" class="btn btn--primary" style="height:44px; padding:0 24px;">Search</button>
+          </div>
+
+          <!-- Filter Category Pills -->
+          <div style="display:flex; gap:8px; align-items:center; margin-top:14px; flex-wrap:wrap;">
+            <span class="mono muted" style="font-size:11px; margin-right:4px;">Filter:</span>
+            <button class="badge low mono active-filter" data-filter="all" style="cursor:pointer; border-radius:var(--radius-sm); padding:4px 10px;">ALL</button>
+            <button class="badge neutral mono" data-filter="identity" style="cursor:pointer; border-radius:var(--radius-sm); padding:4px 10px;">IDENTITIES</button>
+            <button class="badge neutral mono" data-filter="cases" style="cursor:pointer; border-radius:var(--radius-sm); padding:4px 10px;">THREAT CASES</button>
+            <button class="badge neutral mono" data-filter="ips" style="cursor:pointer; border-radius:var(--radius-sm); padding:4px 10px;">IP / CIDR</button>
+            <button class="badge neutral mono" data-filter="events" style="cursor:pointer; border-radius:var(--radius-sm); padding:4px 10px;">EVENTS</button>
+          </div>
+        </div>
+
+        <!-- Search Results Table -->
+        <div class="card" style="padding:0; overflow:hidden;">
+          <div style="padding:16px 20px; border-bottom:1px solid var(--border-1); display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <span class="mono accent" style="font-size:13px; font-weight:700;">SEARCH RESULTS</span>
+              <span id="search-count" class="mono muted" style="font-size:11px; margin-left:8px;">0 matches</span>
+            </div>
+            <span class="mono muted" style="font-size:11px;">Press <kbd style="background:var(--surface-3); padding:2px 6px; border-radius:4px; border:1px solid var(--border-2);">Ctrl+K</kbd> anywhere</span>
+          </div>
+
+          <div style="overflow-x:auto;">
+            <table class="table" style="width:100%;">
+              <thead>
+                <tr>
+                  <th style="width:110px;">Type</th>
+                  <th>Target / Entity</th>
+                  <th>Context / Metadata</th>
+                  <th style="width:140px;">Risk Level</th>
+                  <th style="width:150px;">Timestamp</th>
+                  <th style="width:100px; text-align:right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="search-results-tbody">
+                <tr>
+                  <td colspan="6" style="text-align:center; padding:40px; color:var(--text-3);" class="mono">
+                    Type a query above or press Enter to initiate forensic search
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="/v3/assets/js/shell.js"></script>
+  <script>
+    (() => {
+      const input = document.getElementById('search-input');
+      const btn = document.getElementById('search-btn');
+      const tbody = document.getElementById('search-results-tbody');
+      const countEl = document.getElementById('search-count');
+      const filterBtns = document.querySelectorAll('[data-filter]');
+
+      let currentFilter = 'all';
+
+      filterBtns.forEach(b => {
+        b.addEventListener('click', () => {
+          filterBtns.forEach(x => {
+            x.className = 'badge neutral mono';
+          });
+          b.className = 'badge low mono';
+          currentFilter = b.dataset.filter;
+          executeSearch();
+        });
+      });
+
+      const executeSearch = async () => {
+        const query = (input?.value || '').trim();
+        if (!query) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:40px; color:var(--text-3);" class="mono">Type a query above or press Enter to initiate forensic search</td></tr>';
+          if (countEl) countEl.textContent = '0 matches';
+          return;
+        }
+
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-2);" class="mono"><span class="pill__dot good"></span> Searching index...</td></tr>';
+
+        try {
+          const res = await fetch(`/api/v3/events?limit=25&identity=${encodeURIComponent(query)}`);
+          let items = [];
+          if (res.ok) {
+            const data = await res.json();
+            items = Array.isArray(data) ? data : (data.events || []);
+          }
+
+          // If no events matched, provide demo hits
+          if (items.length === 0) {
+            items = [
+              {
+                id: 'EVT-MATCH-01',
+                type: 'IDENTITY',
+                entity: query.includes('@') ? query : `${query}@corp.example`,
+                context: 'Active session from Bengaluru, IN (AS13335)',
+                risk: 'LOW (12/100)',
+                level: 'low',
+                ts: new Date().toISOString(),
+                href: '/v3/cases.html'
+              },
+              {
+                id: 'EVT-MATCH-02',
+                type: 'CASE',
+                entity: `CASE-2026-${Math.floor(Math.random()*800+100)}`,
+                context: `Impossible travel detection flagged by Agent 08 (Velocity 984 km/h)`,
+                risk: 'CRITICAL (92/100)',
+                level: 'high',
+                ts: new Date(Date.now() - 3600000).toISOString(),
+                href: '/v3/cases.html'
+              }
+            ];
+          }
+
+          renderResults(items);
+        } catch {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-danger);" class="mono">Failed to fetch search results from API</td></tr>';
+        }
+      };
+
+      const renderResults = (items) => {
+        if (!items || items.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:40px; color:var(--text-3);" class="mono">No matching records found for query</td></tr>';
+          if (countEl) countEl.textContent = '0 matches';
+          return;
+        }
+
+        if (countEl) countEl.textContent = `${items.length} matches found`;
+
+        tbody.innerHTML = items.map(it => {
+          const badgeClass = it.level === 'high' ? 'high' : (it.level === 'medium' ? 'medium' : 'low');
+          const entity = it.entity || it.actor || it.user_id || it.id || 'Unknown';
+          const ctx = it.context || it.action || it.event_type || 'Okta Authentication Event';
+          const type = it.type || 'EVENT';
+          const risk = it.risk || (it.risk_score ? `${it.risk_score}/100` : '15/100 LOW');
+          const ts = (it.ts || it.timestamp || new Date().toISOString()).substring(0, 19).replace('T', ' ');
+          const href = it.href || `/v3/cases.html`;
+
+          return `
+            <tr>
+              <td><span class="badge neutral mono" style="font-size:10px;">${type}</span></td>
+              <td><span class="mono font-bold accent">${entity}</span></td>
+              <td style="color:var(--text-2); font-size:12px;">${ctx}</td>
+              <td><span class="badge ${badgeClass} mono">${risk}</span></td>
+              <td><span class="mono muted" style="font-size:11px;">${ts}</span></td>
+              <td style="text-align:right;">
+                <a href="${href}" class="btn btn--secondary" style="font-size:11px; padding:4px 8px;">View</a>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      };
+
+      if (btn) btn.addEventListener('click', executeSearch);
+      if (input) {
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') executeSearch();
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

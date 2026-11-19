@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IdentityShield v3 — Security Command Dashboard</title>
+  
+  <!-- Design System & Tokens -->
+  <script>try{const t=localStorage.getItem('identityshield_theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+  <link rel="stylesheet" href="/v3/css/theme.css">
+  <link rel="stylesheet" href="/v3/css/motion.css">
+  
+  <!-- Google Fonts: Space Grotesk & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Vendored Libraries -->
+  <script src="/vendor/three.min.js"></script>
+  <script src="/vendor/globe.gl.min.js"></script>
+  <!-- ES Module Import Map for Three.js & Addons -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/vendor/three/three.module.js",
+      "three/examples/jsm/environments/RoomEnvironment.js": "/vendor/three/RoomEnvironment.js"
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Main Content Rendered into App Shell -->
+  <div id="main-content">
+    
+    <!-- Top Hero Card: Shield Core Standalone 3D (UI_DESIGN.md §4) -->
+    <div class="glass hero-card" style="padding:28px 32px; margin-bottom:24px; display:grid; grid-template-columns:1.2fr 1fr; gap:28px; align-items:center;">
+      <div>
+        <div style="font-size:0.75rem; font-family:var(--font-mono); color:var(--sky-strong); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px; font-weight:700;">
+          Autonomous Identity Threat Detection & Response
+        </div>
+        <h1 style="font-size:2.1rem; font-weight:700; margin:0 0 10px 0; color:var(--ink); letter-spacing:-0.025em; line-height:1.2;">
+          IdentityShield is guarding <span id="hero-ident-count" style="color:var(--sky-strong); font-family:var(--font-mono);">12</span> identities
+        </h1>
+        <p style="font-size:0.95rem; color:var(--ink-2); margin:0 0 20px 0; max-width:540px; line-height:1.55;">
+          15 autonomous agents watching Okta and AWS in real time. Continuous multi-factor identity resolution, blast radius isolation, and sub-250ms active containment.
+        </p>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <button id="btn-run-dataset" class="btn btn-primary btn-3d btn-tilt btn-shine btn-ripple" type="button">
+            <span class="ico-3d ico-shield-spin" style="margin-right:4px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+            <span id="btn-run-dataset-text">Run Dataset Replay</span>
+          </button>
+          <a href="/v3/cases.html" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/></svg>
+            Open Cases
+          </a>
+          <a href="/v3/live.html" class="btn btn-ghost">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Live Constellation
+          </a>
+        </div>
+      </div>
+      <!-- Right Column: Standalone 3D Shield Core -->
+      <div id="shield-core-hero" style="min-height:340px; height:340px; width:100%; position:relative; overflow:hidden;"></div>
+    </div>
+
+    <!-- 5 KPI Tilt Cards -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:16px; margin-bottom:24px;">
+      
+      <!-- Card 1: Open Cases by Band -->
+      <div class="glass" data-tilt style="padding:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">
+            Open Cases by Band
+          </span>
+          <span style="font-size:0.6875rem; font-family:var(--font-mono); color:var(--cyan);">ACTIVE</span>
+        </div>
+        <div id="kpi-open-cases">
+          <div class="skeleton" style="height:32px; width:45%; margin-bottom:8px;"></div>
+          <div class="skeleton" style="height:14px; width:80%;"></div>
+        </div>
+      </div>
+
+      <!-- Card 2: Identities at Risk >= 60 -->
+      <div class="glass" data-tilt style="padding:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">
+            Identities at Risk &ge; 60
+          </span>
+          <span style="font-size:0.6875rem; font-family:var(--font-mono); color:var(--crit);">ELEVATED</span>
+        </div>
+        <div id="kpi-risk-identities">
+          <div class="skeleton" style="height:32px; width:35%; margin-bottom:8px;"></div>
+          <div class="skeleton" style="height:14px; width:70%;"></div>
+        </div>
+      </div>
+
+      <!-- Card 3: Events / Sec -->
+      <div class="glass" data-tilt style="padding:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">
+            Ingest Throughput
+          </span>
+          <span style="font-size:0.6875rem; font-family:var(--font-mono); color:var(--brand);">HOT PATH</span>
+        </div>
+        <div id="kpi-events-sec">
+          <div class="skeleton" style="height:32px; width:40%; margin-bottom:8px;"></div>
+          <div class="skeleton" style="height:14px; width:65%;"></div>
+        </div>
+      </div>
+
+      <!-- Card 4: p95 Latency -->
+      <div class="glass" data-tilt style="padding:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">
+            p95 Decision Latency
+          </span>
+          <span style="font-size:0.6875rem; font-family:var(--font-mono); color:var(--ok);">&lt; 100ms TARGET</span>
+        </div>
+        <div id="kpi-latency-p95">
+          <div class="skeleton" style="height:32px; width:45%; margin-bottom:8px;"></div>
+          <div class="skeleton" style="height:14px; width:70%;"></div>
+        </div>
+      </div>
+
+      <!-- Card 5: Alert Reduction % -->
+      <div class="glass" data-tilt style="padding:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">
+            Alert Noise Reduction
+          </span>
+          <span style="font-size:0.6875rem; font-family:var(--font-mono); color:var(--violet);">GRAPH FUSION</span>
+        </div>
+        <div id="kpi-alert-reduction">
+          <div class="skeleton" style="height:32px; width:50%; margin-bottom:8px;"></div>
+          <div class="skeleton" style="height:14px; width:75%;"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Main Grid: Top Identities & Live Cases + Mini Globe -->
+    <div style="display:grid; grid-template-columns:1.4fr 1fr; gap:20px; margin-bottom:24px;">
+      
+      <!-- Top Identities Table -->
+      <div class="glass" style="padding:20px; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <h2 style="font-size:1rem; font-weight:600; margin:0; color:var(--ink);">
+              Top Identities at Risk
+            </h2>
+          </div>
+          <span style="font-size:0.75rem; color:var(--muted); font-family:var(--font-mono);">Ranked by 30-Day Memory</span>
+        </div>
+        <div class="table-wrapper" style="flex:1;">
+          <table id="top-identities-table">
+            <thead>
+              <tr>
+                <th>Identity</th>
+                <th style="width:140px;">Identity Risk</th>
+                <th>Session Risk</th>
+                <th>Band</th>
+                <th>Last Active</th>
+              </tr>
+            </thead>
+            <tbody id="top-identities-body">
+              <tr><td colspan="5"><div class="skeleton" style="height:24px; margin:4px 0;"></div></td></tr>
+              <tr><td colspan="5"><div class="skeleton" style="height:24px; margin:4px 0;"></div></td></tr>
+              <tr><td colspan="5"><div class="skeleton" style="height:24px; margin:4px 0;"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Right Column: Mini Globe & Live Cases -->
+      <div style="display:flex; flex-direction:column; gap:20px;">
+        
+        <!-- Mini Globe Tile -->
+        <div class="glass" data-tilt style="padding:16px; position:relative; overflow:hidden;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="status-dot crit" style="box-shadow:0 0 8px #EF4444;"></span>
+              <span style="font-size:0.8125rem; font-weight:600; color:var(--ink);">Geographic Ingress Globe</span>
+            </div>
+            <a href="/v3/globe.html" style="font-size:0.75rem; color:var(--brand); text-decoration:none; display:flex; align-items:center; gap:4px;">
+              Full View &rarr;
+            </a>
+          </div>
+          <!-- Globe Canvas Container -->
+          <div id="mini-globe-container" style="height:200px; width:100%; border-radius:10px; background:var(--surface); position:relative; display:flex; align-items:center; justify-content:center;">
+            <div id="mini-globe-loading" style="color:var(--muted); font-size:0.75rem; font-family:var(--font-mono);">Initializing 3D Globe...</div>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:0.6875rem; color:var(--muted); font-family:var(--font-mono);">
+            <span>RED: Impossible Travel Arc</span>
+            <span>GREEN: Trusted Office ASN</span>
+          </div>
+        </div>
+
+        <!-- Live Cases Feed -->
+        <div class="glass" style="padding:18px; flex:1; display:flex; flex-direction:column;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="status-dot ok" style="box-shadow:0 0 6px #10B981;"></span>
+              <h2 style="font-size:0.875rem; font-weight:600; margin:0; color:var(--ink);">Live Threat Cases</h2>
+            </div>
+            <a href="/v3/cases.html" style="font-size:0.75rem; color:var(--brand); text-decoration:none;">All Cases &rarr;</a>
+          </div>
+          <div id="live-cases-feed" style="display:flex; flex-direction:column; gap:8px; overflow-y:auto; max-height:260px;">
+            <div class="skeleton" style="height:50px;"></div>
+            <div class="skeleton" style="height:50px;"></div>
+          </div>
+        </div>
+
+        <!-- 30-Day Memory Card (Task M1) -->
+        <a href="/memory.html" class="glass is-clickable" data-tilt style="padding:16px; text-decoration:none; display:flex; flex-direction:column; gap:10px; transition:all 0.15s ease;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 6 12 12 16 14"/></svg>
+              <h2 style="font-size:0.875rem; font-weight:700; margin:0; color:var(--ink);">30-Day Memory</h2>
+            </div>
+            <span style="font-size:0.75rem; color:var(--brand); display:flex; align-items:center; gap:4px; font-weight:600;">
+              Open Memory &rarr;
+            </span>
+          </div>
+
+          <div id="dashboard-memory-content" style="display:flex; flex-direction:column; gap:8px;">
+            <div class="skeleton" style="height:36px;"></div>
+            <div class="skeleton" style="height:40px;"></div>
+          </div>
+        </a>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script type="module" src="/v3/js/core/shell.js"></script>
+  <script type="module" src="/v3/js/fx/tilt.js"></script>
+  <script type="module" src="/v3/js/pages/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IdentityShield · Ingest &amp; Scan</title>
+
+  <!-- Google Fonts & Shared Theme Tokens (Phase 1) -->
+  <link rel="stylesheet" href="/v3/assets/css/theme.css">
+  <link rel="stylesheet" href="/v3/assets/css/shell.css">
+  <link rel="stylesheet" href="/v3/assets/css/components.css">
+
+  <!-- Core Theme Styles -->
+  <script>try{const t=localStorage.getItem('identityshield_theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+  <link rel="stylesheet" href="/v3/css/theme.css">
+  <link rel="stylesheet" href="/v3/css/motion.css">
+
+  <!-- Tailwind CSS -->
+  <link rel="stylesheet" href="/v3/css/tailwind.css">
+  <script src="/v3/assets/js/tailwind-theme.js"></script>
+</head>
+<body data-page="ingest">
+
+  <aside id="is-sidebar"></aside>
+  <canvas id="bg3d-canvas" style="display:none;"></canvas>
+
+  <div class="is-main">
+    <header id="is-topbar"></header>
+
+    <main class="is-content">
+      <div id="main-content" style="display:flex; flex-direction:column; gap:24px; max-width:1600px; margin:0 auto; width:100%;">
+    
+        <!-- 1. Page Header Block -->
+        <div class="is-page-head" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;">
+          <div>
+            <h1>Ingest &amp; <span class="accent">Scan</span></h1>
+            <p>Upload raw Okta/CloudTrail logs or trigger attack scenario simulations</p>
+          </div>
+          <div style="display:flex; gap:12px; align-items:center;">
+            <span class="status-pill">
+              <span class="status-dot ok"></span>
+              <span class="mono" style="font-size:11px;">INGEST SERVICE PORT 8001 READY</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- 2. Dual Column: Left Upload Dropzone & Okta Connection + Right Presets -->
+        <div style="display:grid; grid-template-columns:1.35fr 1fr; gap:24px;">
+          
+          <!-- Left Column: Upload Dropzone, Okta Connector, and Manual Editor -->
+          <div style="display:flex; flex-direction:column; gap:20px;">
+            
+            <!-- Upload Dropzone Card -->
+            <div id="upload-dropzone" class="card" style="border:2px dashed var(--border-2); padding:32px 24px; text-align:center; cursor:pointer; transition:all var(--dur); display:flex; flex-direction:column; align-items:center; gap:12px;">
+              <div style="width:48px; height:48px; border-radius:50%; background:rgba(0, 230, 118, 0.12); display:flex; align-items:center; justify-content:center; color:var(--green-500);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+              </div>
+              <div>
+                <div style="font-weight:700; color:var(--text-1); font-size:15px;">Drop Okta System Log export (JSON/CSV) or click to browse</div>
+                <div style="font-size:12px; color:var(--text-3); margin-top:4px;">Supports Okta JSON, CloudTrail JSONL, and Auth0 audit logs up to 50MB</div>
+              </div>
+              <input type="file" id="file-upload-input" accept=".json,.jsonl,.log,.csv" style="display:none;" />
+              <button id="btn-choose-file" class="btn btn--ghost" type="button" style="font-size:12px; padding:6px 16px;">
+                Select File from Disk
+              </button>
+              <span id="file-name-label" class="mono muted" style="font-size:11px;">No file selected</span>
+            </div>
+
+            <!-- Okta Connection Card -->
+            <div class="card" style="padding:20px;">
+              <div class="card__head" style="margin-bottom:14px;">
+                <div>
+                  <h3 class="card__title" style="font-size:15px;">Okta Tenant Ingestion Link</h3>
+                  <div style="font-size:12px; color:var(--text-3); margin-top:2px;">Live API collector polling every 10 seconds</div>
+                </div>
+                <span class="pill">
+                  <span class="pill__dot good"></span>
+                  <span class="mono" style="font-size:11px;">Token Valid</span>
+                </span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:center;">
+                <input class="input mono" type="text" value="https://dev-okta.corp.example.com" placeholder="Okta Org Domain..." style="font-size:12px;" />
+                <button id="btn-test-okta" class="btn btn--ghost" type="button" style="font-size:12px; padding:8px 14px;">
+                  Test Connection
+                </button>
+                <button id="btn-sync-okta" class="btn btn--primary" type="button" style="font-size:12px; padding:8px 14px;">
+                  Start Scan
+                </button>
+              </div>
+            </div>
+
+            <!-- Manual Log Payload JSON Editor -->
+            <div class="card" style="padding:20px; display:flex; flex-direction:column; gap:14px;">
+              <div class="card__head" style="margin-bottom:0;">
+                <div>
+                  <h3 class="card__title" style="font-size:15px;">Manual Log Payload Editor</h3>
+                  <div style="font-size:12px; color:var(--text-3); margin-top:2px;">Paste raw event records or modify attack parameters</div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                  <button id="btn-format-json" class="btn btn--ghost" type="button" style="font-size:11px; padding:4px 10px;">Format JSON</button>
+                  <button id="btn-clear-input" class="btn btn--ghost" type="button" style="font-size:11px; padding:4px 10px;">Clear</button>
+                </div>
+              </div>
+
+              <!-- JSON Textarea -->
+              <textarea id="input-json-editor" class="input mono" placeholder="Paste JSON records here or choose an E1–E9 attack preset from the right panel..." style="width:100%; height:260px; font-size:12px; resize:vertical; line-height:1.5; color:var(--text-1); background:var(--surface-2);"></textarea>
+
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span id="editor-status-label" class="mono muted" style="font-size:11px;">Ready for simulation dispatch</span>
+                <button id="btn-scan-input" class="btn btn--primary" type="button" style="padding:10px 20px; font-size:13px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  Scan Input Payload
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right Column: Benchmark Attack Presets (E1-E9) -->
+          <div class="card" style="display:flex; flex-direction:column; gap:16px; height:fit-content;">
+            <div class="card__head" style="margin-bottom:0; padding-bottom:12px; border-bottom:1px solid var(--border-1);">
+              <div>
+                <h3 class="card__title" style="font-size:16px;">Benchmark Attack Scenarios</h3>
+                <div style="font-size:12px; color:var(--text-3); margin-top:2px;">Click any preset to load its authentic JSON attack vector</div>
+              </div>
+              <span class="badge neutral mono" style="font-size:11px;">E1–E9</span>
+            </div>
+
+            <!-- Presets List -->
+            <div id="presets-container" style="display:flex; flex-direction:column; gap:8px; max-height:640px; overflow-y:auto; padding-right:4px;">
+              <!-- Dynamically populated with E1-E9 -->
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 3. Pipeline Scan Progress (Stage List) -->
+        <div id="scan-progress-card" class="card" style="display:none; padding:20px; flex-direction:column; gap:16px;">
+          <div class="card__head" style="margin-bottom:0;">
+            <div>
+              <h3 class="card__title" style="font-size:15px;">Detection Pipeline Execution</h3>
+              <div class="mono muted" style="font-size:11px; margin-top:2px;">Dispatched across 15 autonomous agents</div>
+            </div>
+            <span id="scan-status-badge" class="badge high mono">Scanning...</span>
+          </div>
+
+          <!-- Progress Bar -->
+          <div style="width:100%; height:6px; background:var(--surface-2); border-radius:var(--radius-pill); overflow:hidden;">
+            <div id="scan-progress-bar" style="width:0%; height:100%; background:var(--green-500); transition:width 0.4s ease; box-shadow:var(--green-glow);"></div>
+          </div>
+
+          <!-- Stage Steps List -->
+          <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:12px; text-align:center;">
+            <div id="stage-collect" class="mono muted" style="font-size:11px; padding:8px; background:var(--surface-2); border-radius:var(--radius-sm); border:1px solid var(--border-1);">
+              <div style="font-weight:700;">1. Collect</div>
+              <div class="stage-state" style="font-size:10px; margin-top:2px;">Pending</div>
+            </div>
+            <div id="stage-normalize" class="mono muted" style="font-size:11px; padding:8px; background:var(--surface-2); border-radius:var(--radius-sm); border:1px solid var(--border-1);">
+              <div style="font-weight:700;">2. Normalize</div>
+              <div class="stage-state" style="font-size:10px; margin-top:2px;">Pending</div>
+            </div>
+            <div id="stage-enrich" class="mono muted" style="font-size:11px; padding:8px; background:var(--surface-2); border-radius:var(--radius-sm); border:1px solid var(--border-1);">
+              <div style="font-weight:700;">3. Enrich</div>
+              <div class="stage-state" style="font-size:10px; margin-top:2px;">Pending</div>
+            </div>
+            <div id="stage-detect" class="mono muted" style="font-size:11px; padding:8px; background:var(--surface-2); border-radius:var(--radius-sm); border:1px solid var(--border-1);">
+              <div style="font-weight:700;">4. Detect</div>
+              <div class="stage-state" style="font-size:10px; margin-top:2px;">Pending</div>
+            </div>
+            <div id="stage-score" class="mono muted" style="font-size:11px; padding:8px; background:var(--surface-2); border-radius:var(--radius-sm); border:1px solid var(--border-1);">
+              <div style="font-weight:700;">5. Score</div>
+              <div class="stage-state" style="font-size:10px; margin-top:2px;">Pending</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Scan Results Output Area -->
+        <div id="scan-results-container" style="display:none; flex-direction:column; gap:16px;">
+          <!-- Populated when scan finishes -->
+        </div>
+
+        <!-- 5. Recent Ingests History Table -->
+        <div class="card" style="padding:20px;">
+          <div class="card__head" style="margin-bottom:14px;">
+            <h3 class="card__title" style="font-size:15px;">Recent Ingests &amp; File History</h3>
+            <span class="mono muted" style="font-size:11px;">Audit Log</span>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>File / Source</th>
+                  <th class="num">Events</th>
+                  <th class="num">Duration</th>
+                  <th>Status</th>
+                  <th class="mono">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody id="recent-ingests-body">
+                <tr>
+                  <td class="mono" style="color:var(--text-1);">okta-production-export-20261030.json</td>
+                  <td class="num mono">14,290</td>
+                  <td class="num mono text-dim">1.2s</td>
+                  <td><span class="badge low mono">PROCESSED</span></td>
+                  <td class="mono muted" style="font-size:11px;">2026-10-30 14:12:08 UTC</td>
+                </tr>
+                <tr>
+                  <td class="mono" style="color:var(--text-1);">aws-cloudtrail-eu-central-1.jsonl</td>
+                  <td class="num mono">8,410</td>
+                  <td class="num mono text-dim">0.8s</td>
+                  <td><span class="badge low mono">PROCESSED</span></td>
+                  <td class="mono muted" style="font-size:11px;">2026-10-30 13:45:22 UTC</td>
+                </tr>
+                <tr>
+                  <td class="mono" style="color:var(--text-1);">scenario-e1-svcreport.json</td>
+                  <td class="num mono">5</td>
+                  <td class="num mono text-dim">0.1s</td>
+                  <td><span class="badge high mono">ATTACK DETECTED</span></td>
+                  <td class="mono muted" style="font-size:11px;">2026-10-30 11:20:19 UTC</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/v3/assets/js/shell.js"></script>
+  <script type="module" src="/v3/js/pages/input.js"></script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IdentityShield · Agent Fleet</title>
+
+  <!-- Google Fonts & Shared Theme Tokens (Phase 1) -->
+  <link rel="stylesheet" href="/v3/assets/css/theme.css">
+  <link rel="stylesheet" href="/v3/assets/css/shell.css">
+  <link rel="stylesheet" href="/v3/assets/css/components.css">
+
+  <!-- Core Theme Styles -->
+  <script>try{const t=localStorage.getItem('identityshield_theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+  <link rel="stylesheet" href="/v3/css/theme.css">
+  <link rel="stylesheet" href="/v3/css/motion.css">
+
+  <!-- Tailwind CSS -->
+  <link rel="stylesheet" href="/v3/css/tailwind.css">
+  <script src="/v3/assets/js/tailwind-theme.js"></script>
+
+  <!-- Vendored Chart.js & Charts Theme -->
+  <script src="/vendor/chart.umd.min.js"></script>
+  <script src="/v3/assets/js/charts-theme.js"></script>
+</head>
+<body data-page="agents">
+
+  <aside id="is-sidebar"></aside>
+  <canvas id="bg3d-canvas" style="display:none;"></canvas>
+
+  <div class="is-main">
+    <header id="is-topbar"></header>
+
+    <main class="is-content">
+      <div id="main-content" style="display:flex; flex-direction:column; gap:24px; max-width:1600px; margin:0 auto; width:100%;">
+    
+        <!-- 1. Page Header Block -->
+        <div class="is-page-head" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;">
+          <div>
+            <h1>Agent <span class="accent">Fleet</span></h1>
+            <p>15 autonomous detection agents across 5 pipeline layers</p>
+          </div>
+          <div style="display:flex; gap:12px; align-items:center;">
+            <span class="status-pill">
+              <span class="status-dot ok"></span>
+              <span id="agents-health-pill" class="mono" style="font-size:11px;">15/15 OPERATIONAL</span>
+            </span>
+            <a href="/v3/live.html" class="btn btn--primary" style="font-size:12px; padding:8px 14px;">
+              View Live Stream &rarr;
+            </a>
+          </div>
+        </div>
+
+        <!-- 2. KPI Summary Row -->
+        <div class="grid-kpi">
+          <div class="card">
+            <div class="card__head">
+              <span class="card__title">Agents Online</span>
+              <span class="mono muted">FLEET</span>
+            </div>
+            <div class="card__val mono accent" id="kpi-agents-online">15/15</div>
+            <div class="card__sub"><span class="pill__dot good"></span> All 5 pipeline layers active</div>
+          </div>
+
+          <div class="card">
+            <div class="card__head">
+              <span class="card__title">Avg Latency</span>
+              <span class="mono muted">p95</span>
+            </div>
+            <div class="card__val mono" id="kpi-avg-latency">2.4 ms</div>
+            <div class="card__sub text-good">&lt; 10ms microsecond dispatch</div>
+          </div>
+
+          <div class="card">
+            <div class="card__head">
+              <span class="card__title">Signals Emitted</span>
+              <span class="mono muted">24H</span>
+            </div>
+            <div class="card__val mono" id="kpi-signals-24h">48,290</div>
+            <div class="card__sub text-dim">Normalized security events</div>
+          </div>
+
+          <div class="card" id="kpi-card-degraded">
+            <div class="card__head">
+              <span class="card__title">Degraded / Off</span>
+              <span class="mono muted">HEALTH</span>
+            </div>
+            <div class="card__val mono" id="kpi-degraded-count">0</div>
+            <div class="card__sub text-dim">0 agents requiring intervention</div>
+          </div>
+        </div>
+
+        <!-- 3. Agents Grouped by 5 Architecture Layers -->
+        <div id="agents-layers-container" style="display:flex; flex-direction:column; gap:24px;">
+          <!-- Skeletons while loading -->
+          <div class="card" style="padding:20px;">
+            <div class="skeleton" style="height:24px; width:200px; margin-bottom:16px;"></div>
+            <div class="skeleton" style="height:120px; width:100%;"></div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Agent Details & Recent Trace Slide-Out Drawer -->
+  <div id="agent-drawer-backdrop" class="drawer__backdrop"></div>
+  <aside id="agent-drawer" class="drawer" style="width:540px;">
+    <div class="drawer__head">
+      <div>
+        <div class="mono muted" style="font-size:10px; text-transform:uppercase; letter-spacing:0.04em;">Agent Telemetry &amp; Inspection</div>
+        <h3 id="drawer-agent-title" style="margin:2px 0 0 0; font-size:17px; color:var(--text-1); font-family:var(--font-mono);">a01 Collector</h3>
+      </div>
+      <button id="btn-close-agent-drawer" class="btn btn--icon" title="Close" type="button">
+        &times;
+      </button>
+    </div>
+    
+    <!-- Drawer Content -->
+    <div class="drawer__body" style="display:flex; flex-direction:column; gap:20px;">
+      
+      <!-- Status & Metadata Card -->
+      <div class="card" style="padding:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span class="mono muted" style="font-size:11px;">ARCHITECTURE LAYER</span>
+          <span id="drawer-agent-layer" class="badge neutral mono" style="font-size:11px;">Layer 1 // Ingest</span>
+        </div>
+        <div id="drawer-agent-desc" style="font-size:12px; color:var(--text-2); line-height:1.5;"></div>
+      </div>
+
+      <!-- Sparkline Throughput Chart -->
+      <div class="card" style="padding:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span class="card__title" style="font-size:13px;">Throughput Profile</span>
+          <span class="mono muted" style="font-size:11px;">EVENTS / SEC</span>
+        </div>
+        <div style="height:80px; width:100%; position:relative;">
+          <canvas id="drawer-sparkline-canvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Agent Capabilities & Checks List -->
+      <div>
+        <div class="mono muted" style="font-size:11px; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.04em;">Assigned Rules &amp; Checks</div>
+        <div id="drawer-capabilities" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+      </div>
+
+      <!-- Threshold Configuration Box -->
+      <div>
+        <div class="mono muted" style="font-size:11px; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.04em;">Active Detection Thresholds</div>
+        <div id="drawer-thresholds" class="compare">
+          <div class="compare__row">
+            <span class="compare__label">Dispatch Mode</span>
+            <span class="compare__val mono">Event-driven (Worker Thread)</span>
+          </div>
+          <div class="compare__row">
+            <span class="compare__label">Max Queue Lag</span>
+            <span class="compare__val mono">50 ms</span>
+          </div>
+          <div class="compare__row">
+            <span class="compare__label">Decision Window</span>
+            <span class="compare__val mono">Rolling 15 min</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Decisions / Trace Stream -->
+      <div>
+        <div class="mono muted" style="font-size:11px; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.04em;">Recent Telemetry Stream (Last 20)</div>
+        <div id="drawer-trace-list" style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto; padding-right:4px;">
+          <div class="empty" style="padding:16px; text-align:center; color:var(--text-3); font-size:12px;">Listening for recent agent events...</div>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- Scripts -->
+  <script src="/v3/assets/js/shell.js"></script>
+  <script type="module" src="/v3/js/pages/agents.js"></script>
+</body>
+</html>

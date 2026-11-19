@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IdentityShield · Geographic Login Globe</title>
+
+  <!-- Google Fonts & Shared Theme Tokens (Phase 1) -->
+  <link rel="stylesheet" href="/v3/assets/css/theme.css">
+  <link rel="stylesheet" href="/v3/assets/css/shell.css">
+  <link rel="stylesheet" href="/v3/assets/css/components.css">
+
+  <!-- Core Theme Styles -->
+  <script>try { const t = localStorage.getItem('identityshield_theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) { }</script>
+  <link rel="stylesheet" href="/v3/css/theme.css">
+  <link rel="stylesheet" href="/v3/css/motion.css">
+
+  <!-- Tailwind CSS -->
+  <link rel="stylesheet" href="/v3/css/tailwind.css">
+  <script src="/v3/assets/js/tailwind-theme.js"></script>
+
+  <!-- Vendored 3D Globe Engine -->
+  <script src="/vendor/three.min.js"></script>
+  <script src="/vendor/globe.gl.min.js"></script>
+
+  <style>
+    /* Globe radial vignette overlay */
+    .globe-vignette {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at center, transparent 65%, rgba(6, 16, 11, 0.6) 100%);
+      border-radius: var(--radius-lg);
+    }
+  </style>
+</head>
+
+<body data-page="globe">
+
+  <aside id="is-sidebar"></aside>
+  <canvas id="bg3d-canvas" style="display:none;"></canvas>
+
+  <div class="is-main">
+    <header id="is-topbar"></header>
+
+    <main class="is-content">
+      <div id="main-content"
+        style="display:flex; flex-direction:column; gap:20px; max-width:1600px; margin:0 auto; width:100%; height:calc(100vh - 100px); min-height:680px;">
+
+        <!-- 1. Page Header Block & Filter Controls -->
+        <div class="is-page-head"
+          style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;">
+          <div>
+            <h1>Login <span class="accent">Globe</span></h1>
+            <p>Geographic view of Okta sign-ins and impossible travel anomalies</p>
+          </div>
+          <!-- Filter Controls Bar -->
+          <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <label for="select-globe-identity" class="mono muted" style="font-size:12px;">IDENTITY:</label>
+              <select id="select-globe-identity" class="select" style="min-width:200px;">
+                <option value="all">All Identities</option>
+                <option value="anita.rao">anita.rao (Impossible Travel)</option>
+                <option value="svc-report">svc-report (High Risk)</option>
+                <option value="alice">alice (Corporate Office)</option>
+              </select>
+            </div>
+
+            <!-- Impossible Travel Counter Badge -->
+            <span id="impossible-arc-badge" class="badge high" style="padding:4px 10px; font-size:11px;">
+              <span class="pill__dot bad"></span> <span id="impossible-arc-count">4 IMPOSSIBLE TRAVEL ARCS</span>
+            </span>
+
+            <button id="btn-toggle-rotate" class="btn btn--ghost" type="button"
+              style="font-size:12px; padding:6px 12px;">
+              Toggle Auto-Rotate
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Dual Columns: 3D Stylized Globe + Right Investigation Panel -->
+        <div style="display:grid; grid-template-columns:1fr 400px; gap:20px; flex:1; min-height:0;">
+
+          <!-- Left: 3D Globe Card -->
+          <div class="card"
+            style="position:relative; overflow:hidden; padding:0; display:flex; flex-direction:column; height:100%;">
+            <!-- Dark Legend Card Overlay (Top-Left) -->
+            <div class="card"
+              style="position:absolute; top:16px; left:16px; z-index:15; padding:12px 16px; background:rgba(10, 16, 13, 0.88); backdrop-filter:blur(10px); border:1px solid var(--border-2); border-radius:var(--radius-md); pointer-events:none;">
+              <div class="mono muted"
+                style="font-size:10px; text-transform:uppercase; margin-bottom:6px; letter-spacing:0.04em;">Geographic
+                Legend</div>
+              <div style="display:flex; flex-direction:column; gap:6px; font-size:12px; font-family:var(--font-mono);">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="color:var(--green-500); font-size:14px;">&bull;</span>
+                  <span style="color:var(--text-1);">Normal (corporate ASN / office IP)</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="color:var(--red-500); font-size:14px;">&bull;</span>
+                  <span style="color:var(--text-1);">Suspicious / anomaly origin</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="color:var(--red-500); font-weight:700;">&mdash;</span>
+                  <span style="color:var(--text-1);">Impossible travel (&gt; 900 km/h)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Globe Canvas Container -->
+            <div id="globe-container" style="flex:1; width:100%; height:100%; min-height:480px;"></div>
+            <div class="globe-vignette"></div>
+          </div>
+
+          <!-- Right Column: Impossible Travel Panel & Active Locations -->
+          <div
+            style="display:flex; flex-direction:column; gap:20px; height:100%; min-height:0; overflow-y:auto; padding-right:4px;">
+
+            <!-- Card 1: Detection D-ACC-01 / Impossible Travel Events -->
+            <div id="card-impossible-travel" class="card card--danger" style="display:flex; flex-direction:column;">
+              <div class="card__head" style="margin-bottom:12px;">
+                <div>
+                  <div class="mono text-danger" style="font-size:11px; text-transform:uppercase; font-weight:700;">
+                    Detection D-ACC-01</div>
+                  <h3 class="card__title" style="font-size:16px; margin-top:2px;">Impossible Travel Events</h3>
+                </div>
+                <span id="impossible-panel-badge" class="badge high">Active</span>
+              </div>
+
+              <!-- List of Impossible Travel Events -->
+              <div id="globe-events-list" style="display:flex; flex-direction:column; gap:10px;">
+                <div class="skeleton" style="height:64px; width:100%;"></div>
+                <div class="skeleton" style="height:64px; width:100%;"></div>
+              </div>
+            </div>
+
+            <!-- Card 2: Active Locations & ASN Prefixes (Aggregated) -->
+            <div class="card" style="display:flex; flex-direction:column; flex:1; min-height:0;">
+              <div class="card__head" style="margin-bottom:12px;">
+                <h3 class="card__title" style="font-size:15px;">Active Locations &amp; ASN Prefixes</h3>
+                <span id="locations-count-pill" class="mono muted" style="font-size:11px;">-- unique locations</span>
+              </div>
+
+              <div id="globe-locations-list"
+                style="display:flex; flex-direction:column; gap:8px; overflow-y:auto; flex:1; padding-right:4px;">
+                <div class="skeleton" style="height:40px; width:100%;"></div>
+                <div class="skeleton" style="height:40px; width:100%;"></div>
+                <div class="skeleton" style="height:40px; width:100%;"></div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/v3/assets/js/shell.js"></script>
+  <script type="module" src="/v3/js/pages/globe.js"></script>
+</body>
+
+</html>

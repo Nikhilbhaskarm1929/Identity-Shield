@@ -1,0 +1,801 @@
+/* =============================================================================
+   IdentityShield — Shared Component Library
+   Specification: DESIGN_SPEC.md §5 & 03_PHASE_3_COMPONENT_LIBRARY.md
+   Tokens only: absolutely no raw hex colors allowed in this file.
+   ============================================================================= */
+
+/* ==================== 1. CARDS ==================== */
+.card {
+  background-color: var(--surface-1);
+  background-image: radial-gradient(600px circle at 0 0, rgba(0, 230, 118, 0.05), transparent 40%);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  position: relative;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+
+.card:hover {
+  border-color: var(--border-2);
+  box-shadow: 0 4px 20px rgba(0, 230, 118, 0.08);
+}
+
+.card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.card__title {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-1);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  letter-spacing: -0.015em;
+}
+
+.card__title svg {
+  width: 20px;
+  height: 20px;
+  color: var(--green-500);
+  stroke-width: 1.8px;
+  flex-shrink: 0;
+}
+
+.card__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card__body {
+  position: relative;
+}
+
+/* Threat / Alert Card Variant */
+.card--danger {
+  border: 1px solid var(--red-500) !important;
+  background-color: var(--surface-1);
+  background-image: radial-gradient(ellipse at top left, rgba(255, 59, 59, 0.16) 0%, var(--surface-1) 75%) !important;
+  box-shadow: var(--red-glow), inset 0 0 16px rgba(255, 59, 59, 0.08) !important;
+}
+
+.card--danger:hover {
+  box-shadow: 0 0 32px rgba(255, 59, 59, 0.35), inset 0 0 20px rgba(255, 59, 59, 0.12) !important;
+}
+
+/* Warning Card Variant */
+.card--warn {
+  border: 1px solid var(--amber-500) !important;
+  background-color: var(--surface-1);
+  background-image: radial-gradient(ellipse at top left, rgba(245, 165, 36, 0.14) 0%, var(--surface-1) 75%) !important;
+  box-shadow: 0 0 24px rgba(245, 165, 36, 0.18) !important;
+}
+
+/* ==================== 2. KPI TILES ==================== */
+.kpi {
+  background-color: var(--surface-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  min-height: 140px;
+  transition: all var(--dur-fast) var(--ease);
+}
+
+.kpi:hover {
+  border-color: var(--border-2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 230, 118, 0.08);
+}
+
+.kpi__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.kpi__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.kpi__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-2);
+  background-color: rgba(0, 230, 118, 0.08);
+  color: var(--green-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kpi__icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2px;
+}
+
+.card--danger .kpi__icon {
+  border-color: rgba(255, 59, 59, 0.35);
+  background-color: rgba(255, 59, 59, 0.14);
+  color: var(--red-500);
+  box-shadow: 0 0 12px rgba(255, 59, 59, 0.3);
+}
+
+.kpi__value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-1);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.kpi__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  margin-top: 3px;
+}
+
+.kpi__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.kpi__delta.up {
+  color: var(--green-500);
+}
+
+.kpi__delta.down {
+  color: var(--text-3);
+}
+
+.kpi__delta.bad {
+  color: var(--red-500);
+}
+
+.kpi__spark {
+  width: 100%;
+  height: 38px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.kpi__spark svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ==================== 3. PILLS & STATUS ==================== */
+.pill {
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background-color: var(--surface-2);
+  border: 1px solid var(--border-1);
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+
+.pill__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pill__dot.ok {
+  background-color: var(--green-500);
+  box-shadow: 0 0 8px var(--green-500);
+}
+
+.pill__dot.warn {
+  background-color: var(--amber-500);
+  box-shadow: 0 0 8px var(--amber-500);
+}
+
+.pill__dot.bad {
+  background-color: var(--red-500);
+  box-shadow: 0 0 8px var(--red-500);
+}
+
+/* ==================== 4. BADGES ==================== */
+.badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.badge.high {
+  color: var(--red-500);
+  background-color: rgba(255, 59, 59, 0.14);
+  border: 1px solid rgba(255, 59, 59, 0.45);
+}
+
+.badge.medium {
+  color: var(--amber-500);
+  background-color: rgba(245, 165, 36, 0.14);
+  border: 1px solid rgba(245, 165, 36, 0.45);
+}
+
+.badge.low {
+  color: var(--green-500);
+  background-color: rgba(0, 230, 118, 0.12);
+  border: 1px solid rgba(0, 230, 118, 0.35);
+}
+
+.badge.info {
+  color: var(--text-2);
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-1);
+}
+
+.badge--score {
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  border: 1px solid var(--red-500);
+  color: var(--red-500);
+  background-color: rgba(255, 59, 59, 0.10);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ==================== 5. ALERT ROWS ==================== */
+.alert-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background-color: var(--surface-2);
+  border: 1px solid var(--border-1);
+  gap: 14px;
+  transition: all var(--dur-fast) var(--ease);
+  text-decoration: none;
+}
+
+.alert-row:hover {
+  background-color: var(--surface-3);
+  border-color: var(--border-2);
+  transform: translateX(2px);
+}
+
+.alert-row__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.alert-row__icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.alert-row__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.alert-row--danger .alert-row__icon {
+  color: var(--red-500);
+  background-color: rgba(255, 59, 59, 0.12);
+  border: 1px solid rgba(255, 59, 59, 0.35);
+}
+
+.alert-row--warn .alert-row__icon {
+  color: var(--amber-500);
+  background-color: rgba(245, 165, 36, 0.12);
+  border: 1px solid rgba(245, 165, 36, 0.35);
+}
+
+.alert-row--ok .alert-row__icon {
+  color: var(--green-500);
+  background-color: rgba(0, 230, 118, 0.10);
+  border: 1px solid rgba(0, 230, 118, 0.30);
+}
+
+.alert-row__info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.alert-row__title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.alert-row__meta {
+  font-size: 12px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  margin-top: 2px;
+}
+
+/* ==================== 6. TABLES ==================== */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  background-color: var(--surface-1);
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+}
+
+.table thead th {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-1);
+  background-color: var(--surface-2);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.table tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-1);
+  font-size: 13px;
+  color: var(--text-2);
+  height: 52px;
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr {
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.table tbody tr:hover {
+  background-color: var(--surface-3);
+  color: var(--text-1);
+}
+
+.table tbody tr.selected {
+  background-color: var(--surface-3);
+  box-shadow: inset 3px 0 0 var(--green-500);
+}
+
+/* ==================== 7. BUTTONS ==================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+  text-decoration: none;
+  outline: none;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.btn--primary {
+  background-color: var(--green-500);
+  color: var(--bg-0);
+  font-weight: 700;
+  border: 1px solid var(--green-400);
+  box-shadow: 0 0 16px rgba(0, 230, 118, 0.25);
+}
+
+.btn--primary:hover {
+  background-color: var(--green-400);
+  box-shadow: 0 0 24px rgba(0, 230, 118, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn--ghost {
+  background-color: transparent;
+  color: var(--text-2);
+  border: 1px solid var(--border-1);
+}
+
+.btn--ghost:hover {
+  background-color: var(--surface-3);
+  color: var(--text-1);
+  border-color: var(--border-2);
+}
+
+.btn--danger {
+  background-color: rgba(255, 59, 59, 0.15);
+  color: var(--red-500);
+  border: 1px solid var(--red-500);
+}
+
+.btn--danger:hover {
+  background-color: var(--red-500);
+  color: var(--text-1);
+  box-shadow: var(--red-glow);
+}
+
+.btn--icon {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: var(--radius-md);
+}
+
+.btn--icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* ==================== 8. FORM CONTROLS ==================== */
+.input, .select {
+  background-color: var(--surface-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  color: var(--text-1);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-family: var(--font-ui);
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+
+.input:focus, .select:focus {
+  border-color: var(--green-500);
+  box-shadow: 0 0 0 3px rgba(0, 230, 118, 0.25);
+}
+
+.tabs {
+  display: inline-flex;
+  background-color: var(--surface-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  gap: 4px;
+}
+
+.tab {
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: pointer;
+  border: 1px solid transparent;
+  background-color: transparent;
+  transition: all var(--dur-fast) var(--ease);
+}
+
+.tab:hover:not(.active) {
+  color: var(--text-1);
+}
+
+.tab.active {
+  background-color: var(--green-700);
+  color: var(--text-1);
+  border-color: var(--border-2);
+}
+
+/* ==================== 9. LEGEND ==================== */
+.legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend__dot.normal {
+  background-color: var(--green-500);
+  box-shadow: 0 0 6px var(--green-500);
+}
+
+.legend__dot.suspicious {
+  background-color: var(--red-500);
+  box-shadow: 0 0 6px var(--red-500);
+}
+
+/* ==================== 10. COMPARE BOX ==================== */
+.compare {
+  background-color: var(--surface-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.compare__col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.compare__label {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-3);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.compare__value {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.compare__col.flagged .compare__value {
+  color: var(--red-500);
+  font-weight: 700;
+}
+
+/* ==================== 11. EMPTY STATE ==================== */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-3);
+  gap: 12px;
+}
+
+.empty__icon {
+  width: 44px;
+  height: 44px;
+  color: var(--text-3);
+  opacity: 0.6;
+  stroke-width: 1.5px;
+}
+
+.empty__text {
+  font-size: 14px;
+  color: var(--text-2);
+  max-width: 320px;
+}
+
+/* ==================== 12. SKELETON ==================== */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: isSkelShimmer 1.8s infinite linear;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes isSkelShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ==================== 13. GRIDS & LAYOUTS ==================== */
+.grid-kpi {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.grid-2-1 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+.grid-1-1 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 1200px) {
+  .grid-kpi {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  .grid-2-1, .grid-1-1 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .grid-kpi {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==================== 14. UTILITIES ==================== */
+.mono { font-family: var(--font-mono); }
+.text-accent { color: var(--green-500); }
+.text-danger { color: var(--red-500); }
+.text-warn { color: var(--amber-500); }
+.muted { color: var(--text-3); }
+
+/* Slide-over Drawer */
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 440px;
+  max-width: 90vw;
+  height: 100vh;
+  background-color: var(--surface-1);
+  border-left: 1px solid var(--border-1);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.6);
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform var(--dur) var(--ease);
+}
+
+.drawer.open {
+  transform: translateX(0);
+}
+
+/* Modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(3, 6, 5, 0.78);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal {
+  width: 520px;
+  max-width: 90vw;
+  background-color: var(--surface-1);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--green-glow), 0 20px 40px rgba(0, 0, 0, 0.7);
+  padding: 24px;
+}
+
+/* ==================== 15. RADAR & ANIMATIONS ==================== */
+@keyframes radarWave {
+  0% { transform: translate(-50%, -50%) scale(0.4); opacity: 0.9; }
+  50% { opacity: 0.5; }
+  100% { transform: translate(-50%, -50%) scale(2.8); opacity: 0; }
+}
+
+.radar-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  border: 1.5px solid var(--red-500);
+  pointer-events: none;
+  animation: radarWave 2.6s infinite cubic-bezier(0.2, 0.6, 0.35, 1);
+}
+
+.radar-circle:nth-child(2) { animation-delay: 0.85s; }
+.radar-circle:nth-child(3) { animation-delay: 1.7s; }
+
+@keyframes chevronPulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.15) translateX(3px); opacity: 1; filter: drop-shadow(0 0 6px var(--red-500)); }
+}
+
+.chevron-pulse {
+  animation: chevronPulse 1.8s infinite ease-in-out;
+}
+
+/* Glass Card Aliases */
+.glass-card {
+  background-color: var(--surface-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+
+.glass-card-green {
+  border-color: var(--border-2);
+}
+
+.glass-card-green:hover {
+  border-color: rgba(0, 230, 118, 0.45);
+  box-shadow: 0 4px 20px rgba(0, 230, 118, 0.08);
+}
+
+.glass-card-red {
+  border: 1px solid var(--red-500) !important;
+  background-image: radial-gradient(ellipse at top left, rgba(255, 59, 59, 0.16) 0%, var(--surface-1) 75%) !important;
+  box-shadow: var(--red-glow), inset 0 0 16px rgba(255, 59, 59, 0.08) !important;
+}
+
+.glass-card-red:hover {
+  box-shadow: 0 0 32px rgba(255, 59, 59, 0.35), inset 0 0 20px rgba(255, 59, 59, 0.12) !important;
+}
+
+/* Decorative Speed Stripes */
+.speed-stripes {
+  display: flex;
+  gap: 3px;
+}
+.speed-stripes span {
+  display: block;
+  width: 4px;
+  height: 14px;
+  background: var(--green-500);
+  transform: skewX(-24deg);
+  border-radius: 1px;
+  opacity: 0.75;
+}
+

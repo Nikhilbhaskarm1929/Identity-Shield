@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IdentityShield · Security Analytics</title>
+
+  <!-- Google Fonts & Shared Theme Tokens (Phase 1) -->
+  <link rel="stylesheet" href="/v3/assets/css/theme.css">
+  <link rel="stylesheet" href="/v3/assets/css/shell.css">
+  <link rel="stylesheet" href="/v3/assets/css/components.css">
+
+  <!-- Core Theme Styles -->
+  <script>try{const t=localStorage.getItem('identityshield_theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+  <link rel="stylesheet" href="/v3/css/theme.css">
+  <link rel="stylesheet" href="/v3/css/motion.css">
+
+  <!-- Tailwind CSS -->
+  <link rel="stylesheet" href="/v3/css/tailwind.css">
+  <script src="/v3/assets/js/tailwind-theme.js"></script>
+
+  <!-- Vendored Chart.js & Charts Theme -->
+  <script src="/vendor/chart.umd.min.js"></script>
+  <script src="/v3/assets/js/charts-theme.js"></script>
+</head>
+<body data-page="analytics">
+
+  <aside id="is-sidebar"></aside>
+  <canvas id="bg3d-canvas" style="display:none;"></canvas>
+  <div id="chart-models-comparison" style="display:none;"></div>
+  <div id="detector-performance-table" style="display:none;"></div>
+
+  <div class="is-main">
+    <header id="is-topbar"></header>
+
+    <main class="is-content">
+      <div id="main-content" style="display:flex; flex-direction:column; gap:24px; max-width:1600px; margin:0 auto; width:100%;">
+    
+        <!-- 1. Page Header Block with Time Range Tabs -->
+        <div class="is-page-head" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;">
+          <div>
+            <h1>Security <span class="accent">Analytics</span></h1>
+            <p>Detection velocity, identity telemetry, and behavioral anomaly trends</p>
+          </div>
+          <!-- Time Range Tabs -->
+          <div class="tabs" id="analytics-time-tabs">
+            <button type="button" class="tab active" data-range="24h">24h</button>
+            <button type="button" class="tab" data-range="7d">7d</button>
+            <button type="button" class="tab" data-range="30d">30d</button>
+          </div>
+        </div>
+
+        <!-- 2. Row 1: Logins Over Time (Normal vs Suspicious Area Chart) -->
+        <div class="card">
+          <div class="card__head">
+            <h2 class="card__title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Logins Over Time
+            </h2>
+            <div class="card__actions">
+              <div class="legend">
+                <span class="legend__item"><span class="legend__dot normal"></span> Normal Logins</span>
+                <span class="legend__item"><span class="legend__dot suspicious"></span> Suspicious Anomalies</span>
+              </div>
+            </div>
+          </div>
+          <div class="card__body" style="height:280px;">
+            <canvas id="chart-logins-over-time"></canvas>
+          </div>
+        </div>
+
+        <!-- 3. Row 2: Detections by Type (Horizontal Bars) & MFA Method Share (Donut) -->
+        <div class="grid-2-1">
+          <!-- Left: Detections by Type (Horizontal Bars) -->
+          <div class="card">
+            <div class="card__head">
+              <h3 class="card__title" style="font-size:16px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                Detections by Type
+              </h3>
+              <div class="card__actions">
+                <div class="legend">
+                  <span class="legend__item"><span class="legend__dot normal"></span> Low</span>
+                  <span class="legend__item"><span class="legend__dot" style="background:var(--amber-500);"></span> Medium</span>
+                  <span class="legend__item"><span class="legend__dot suspicious"></span> High / Critical</span>
+                </div>
+              </div>
+            </div>
+            <div class="card__body" style="height:260px;">
+              <canvas id="chart-detections-by-type"></canvas>
+            </div>
+          </div>
+
+          <!-- Right: MFA Method Share (Donut) -->
+          <div class="card">
+            <div class="card__head">
+              <h3 class="card__title" style="font-size:16px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+                MFA Method Share
+              </h3>
+              <span class="mono muted" style="font-size:11px;">AUTH TYPES</span>
+            </div>
+            <div class="card__body" style="height:260px; position:relative; display:flex; align-items:center; justify-content:center;">
+              <canvas id="chart-mfa-share"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Row 3: Top Risky Users (Table) & Geography Breakdown (Bars) -->
+        <div class="grid-2-1">
+          <!-- Left: Top Risky Users Table -->
+          <div class="card" style="padding:0; overflow:hidden;">
+            <div class="card__head" style="padding:20px 24px 14px 24px; margin-bottom:0;">
+              <h3 class="card__title" style="font-size:16px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Top Risky Identities
+              </h3>
+              <a href="/v3/cases.html" class="btn btn--ghost" style="padding:4px 10px; font-size:12px; text-decoration:none;">
+                View Cases &rarr;
+              </a>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Identity</th>
+                    <th>Role / Dept</th>
+                    <th>Top Detection</th>
+                    <th>Risk Score</th>
+                    <th>Status</th>
+                    <th style="text-align:right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="top-risky-users-body">
+                  <tr><td colspan="6"><div class="skeleton" style="height:32px; margin:6px 12px;"></div></td></tr>
+                  <tr><td colspan="6"><div class="skeleton" style="height:32px; margin:6px 12px;"></div></td></tr>
+                  <tr><td colspan="6"><div class="skeleton" style="height:32px; margin:6px 12px;"></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Right: Geography Breakdown (Bars) -->
+          <div class="card">
+            <div class="card__head">
+              <h3 class="card__title" style="font-size:16px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                Geography Breakdown
+              </h3>
+              <span class="mono text-accent" style="font-size:11px;">LOCATIONS</span>
+            </div>
+            <div class="card__body" style="height:280px;">
+              <canvas id="chart-geography"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/v3/assets/js/shell.js"></script>
+  <script type="module" src="/v3/js/pages/analytics.js"></script>
+</body>
+</html>

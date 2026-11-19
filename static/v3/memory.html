@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IdentityShield · 30-Day Memory</title>
+
+  <!-- Google Fonts & Shared Theme Tokens -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/v3/assets/css/theme.css">
+  <link rel="stylesheet" href="/v3/assets/css/shell.css">
+  <link rel="stylesheet" href="/v3/assets/css/components.css">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/v3/assets/js/tailwind-theme.js"></script>
+
+  <!-- Chart.js & Neon Shield Chart Theme -->
+  <script src="/vendor/chart.umd.min.js"></script>
+  <script src="/v3/assets/js/charts-theme.js"></script>
+
+  <style>
+    /* 7x24 Heatmap Grid styling using tokens */
+    .heatmap-grid {
+      display: grid;
+      grid-template-columns: 36px repeat(24, 1fr);
+      gap: 3px;
+      align-items: center;
+    }
+    .heatmap-hour-header {
+      font-size: 10px;
+      color: var(--text-3);
+      font-family: var(--font-mono);
+      text-align: center;
+    }
+    .heatmap-day-label {
+      font-size: 11px;
+      color: var(--text-2);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    .heatmap-cell {
+      height: 20px;
+      border-radius: var(--radius-sm);
+      background: var(--surface-2);
+      border: 1px solid var(--border-1);
+      transition: all var(--dur-fast);
+      position: relative;
+    }
+    .heatmap-cell:hover {
+      transform: scale(1.15);
+      z-index: 5;
+    }
+    .heatmap-cell.anomaly {
+      border: 1.5px solid var(--red-500) !important;
+      box-shadow: 0 0 8px rgba(255, 59, 59, 0.45);
+    }
+  </style>
+</head>
+<body data-page="memory">
+
+  <aside id="is-sidebar"></aside>
+
+  <div class="is-main">
+    <header id="is-topbar"></header>
+
+    <main class="is-content">
+      <div id="main-content" style="display:flex; flex-direction:column; gap:24px; max-width:1600px; margin:0 auto; width:100%;">
+        
+        <!-- 1. Page Header Block with Identity Selector -->
+        <div class="is-page-head" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;">
+          <div>
+            <h1>30-Day <span class="accent">Memory</span></h1>
+            <p>Behavioral baseline per identity &bull; Linked multi-day attack stories</p>
+          </div>
+          <!-- Identity Selector -->
+          <div style="display:flex; align-items:center; gap:10px;">
+            <label for="identity-select" class="mono muted" style="font-size:12px; font-weight:600;">IDENTITY:</label>
+            <select id="identity-select" class="select" style="min-width:260px;">
+              <option value="">Loading identities...</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 2. KPI Memory Tiles Row -->
+        <div id="tiles" class="grid-kpi">
+          <div class="kpi"><div class="skeleton" style="height:40px;"></div></div>
+          <div class="kpi"><div class="skeleton" style="height:40px;"></div></div>
+          <div class="kpi"><div class="skeleton" style="height:40px;"></div></div>
+          <div class="kpi"><div class="skeleton" style="height:40px;"></div></div>
+        </div>
+
+        <div id="banner"></div>
+
+        <!-- 3. Dual Section: Heatmap & Baseline vs Today Chart -->
+        <div class="grid-2-1">
+          <!-- Card: Login Hours Heatmap (7x24 grid) -->
+          <div class="card">
+            <div class="card__head">
+              <h2 class="card__title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Login Hours Heatmap
+              </h2>
+              <div class="card__actions">
+                <div class="legend">
+                  <span class="legend__item"><span class="legend__dot normal"></span> Typical</span>
+                  <span class="legend__item"><span class="legend__dot suspicious" style="background:var(--red-500); border:1px solid var(--red-500);"></span> Anomalous Hour</span>
+                </div>
+              </div>
+            </div>
+            
+            <div id="heatmap-container" style="overflow-x:auto; padding-bottom:6px;">
+              <div class="skeleton" style="height:160px; width:100%;"></div>
+            </div>
+          </div>
+
+          <!-- Card: Baseline vs Today Area Chart -->
+          <div class="card">
+            <div class="card__head">
+              <h3 class="card__title" style="font-size:16px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Baseline vs Today
+              </h3>
+              <div class="card__actions">
+                <div class="legend">
+                  <span class="legend__item"><span class="legend__dot normal"></span> Baseline</span>
+                  <span class="legend__item"><span class="legend__dot suspicious"></span> Today</span>
+                </div>
+              </div>
+            </div>
+            <div class="card__body" style="height:190px;">
+              <canvas id="baseline-today-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Known Profiling: Locations & Devices -->
+        <div class="grid-1-1">
+          <!-- Card: Known Locations -->
+          <div class="card">
+            <div class="card__head">
+              <h3 class="card__title" style="font-size:16px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                Known Locations
+              </h3>
+              <span id="locations-count-badge" class="badge info">-- Locations</span>
+            </div>
+            <div id="locations-list" style="display:flex; flex-direction:column; gap:8px;">
+              <div class="skeleton" style="height:36px; width:100%;"></div>
+              <div class="skeleton" style="height:36px; width:100%;"></div>
+            </div>
+          </div>
+
+          <!-- Card: Known Devices & Browsers -->
+          <div class="card">
+            <div class="card__head">
+              <h3 class="card__title" style="font-size:16px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                Known Devices &amp; Browsers
+              </h3>
+              <span id="devices-count-badge" class="badge info">-- Devices</span>
+            </div>
+            <div id="devices-list" style="display:flex; flex-direction:column; gap:8px;">
+              <div class="skeleton" style="height:44px; width:100%;"></div>
+              <div class="skeleton" style="height:44px; width:100%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Linked Multi-Day Findings & Stage Hits -->
+        <div class="grid-2-1" style="align-items:start;">
+          <!-- Left: Identity Memory Deep Dive & Stage Hits Table -->
+          <div class="card">
+            <div class="card__head">
+              <h2 id="idTitle" class="card__title">Identity Memory History</h2>
+              <span id="identity-risk-badge" class="badge--score">Risk: --</span>
+            </div>
+            <div id="identity">
+              <div class="empty">
+                <svg class="empty__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <div style="font-size:15px; font-weight:700; color:var(--text-1);">Select an Identity</div>
+                <div class="empty__text">Choose an identity from the dropdown above to view its 30-day baseline and remembered attack stages.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Linked Multi-Day Findings List -->
+          <div class="card">
+            <div class="card__head">
+              <h3 class="card__title" style="font-size:16px;">Linked Multi-Day Findings</h3>
+              <span id="findings-count-badge" class="badge high">-- Chains</span>
+            </div>
+            <div id="findings" style="display:flex; flex-direction:column; gap:10px; max-height:480px; overflow-y:auto; padding-right:4px;">
+              <div class="skeleton" style="height:52px; width:100%;"></div>
+              <div class="skeleton" style="height:52px; width:100%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. Analyst Retention & Simulation Actions -->
+        <div class="card" style="padding:16px 20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span class="mono muted" style="font-size:11px; text-transform:uppercase;">Analyst Token:</span>
+              <input id="token" type="password" class="input" placeholder="Enter token..." style="width:160px; height:32px; font-size:12px;" />
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button id="btnSynth" class="btn btn--primary" type="button" style="font-size:12px; padding:6px 14px;">Generate 30-day Test Data</button>
+              <button id="btnIngest" class="btn btn--ghost" type="button" style="font-size:12px; padding:6px 14px;">Ingest Dataset</button>
+              <button id="btnPrune" class="btn btn--ghost" type="button" style="font-size:12px; padding:6px 14px;">Apply Retention</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- Scripts -->
+  <script src="/v3/assets/js/shell.js"></script>
+  <script type="module" src="/js/memory30.js"></script>
+</body>
+</html>

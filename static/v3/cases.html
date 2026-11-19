@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IdentityShield · Threat Cases</title>
+
+  <!-- Google Fonts & Shared Theme Tokens (Phase 1) -->
+  <link rel="stylesheet" href="/v3/assets/css/theme.css">
+  <link rel="stylesheet" href="/v3/assets/css/shell.css">
+  <link rel="stylesheet" href="/v3/assets/css/components.css">
+
+  <!-- Core Theme Styles -->
+  <script>try{const t=localStorage.getItem('identityshield_theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+  <link rel="stylesheet" href="/v3/css/theme.css">
+  <link rel="stylesheet" href="/v3/css/motion.css">
+
+  <!-- Tailwind CSS -->
+  <link rel="stylesheet" href="/v3/css/tailwind.css">
+  <script src="/v3/assets/js/tailwind-theme.js"></script>
+</head>
+<body data-page="cases">
+
+  <aside id="is-sidebar"></aside>
+  <canvas id="bg3d-canvas" style="display:none;"></canvas>
+
+  <div class="is-main">
+    <header id="is-topbar"></header>
+
+    <main class="is-content">
+      <div id="main-content" style="display:flex; flex-direction:column; gap:24px; max-width:1600px; margin:0 auto; width:100%;">
+    
+        <!-- 1. Page Header Block -->
+        <div class="is-page-head">
+          <h1>Threat <span class="accent">Cases</span></h1>
+          <p>Investigate and resolve suspicious identity activity</p>
+        </div>
+
+        <!-- 2. KPI Row (.grid-kpi: 4 tiles with sparklines) -->
+        <section class="grid-kpi" id="cases-kpi-row">
+          <!-- Open Cases -->
+          <div class="kpi" id="kpi-open-card">
+            <div class="kpi__top">
+              <div class="kpi__left">
+                <div class="kpi__icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <div>
+                  <div class="kpi__value" id="kpi-open-val">--</div>
+                  <div class="kpi__label">Open Cases</div>
+                </div>
+              </div>
+              <span class="kpi__delta bad" id="kpi-open-delta">&uarr; Active</span>
+            </div>
+            <div class="kpi__spark">
+              <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="kpi-open-grad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--red-500)" stop-opacity="0.45"/>
+                    <stop offset="100%" stop-color="var(--red-500)" stop-opacity="0.0"/>
+                  </linearGradient>
+                </defs>
+                <path d="M0,32 Q40,30 80,24 T140,28 T180,10 T200,4 L200,36 L0,36 Z" fill="url(#kpi-open-grad)"/>
+                <path d="M0,32 Q40,30 80,24 T140,28 T180,10 T200,4" fill="none" stroke="var(--red-500)" stroke-width="2"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- High Severity -->
+          <div class="kpi" id="kpi-high-card">
+            <div class="kpi__top">
+              <div class="kpi__left">
+                <div class="kpi__icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <div>
+                  <div class="kpi__value" id="kpi-high-val">--</div>
+                  <div class="kpi__label">High Severity</div>
+                </div>
+              </div>
+              <span class="kpi__delta bad" id="kpi-high-delta">&ge; 70 Risk</span>
+            </div>
+            <div class="kpi__spark">
+              <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+                <path d="M0,28 Q30,22 60,25 T120,18 T160,12 T200,6 L200,36 L0,36 Z" fill="url(#kpi-open-grad)"/>
+                <path d="M0,28 Q30,22 60,25 T120,18 T160,12 T200,6" fill="none" stroke="var(--red-500)" stroke-width="2"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Mean Time to Resolve -->
+          <div class="kpi">
+            <div class="kpi__top">
+              <div class="kpi__left">
+                <div class="kpi__icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div>
+                  <div class="kpi__value">18m</div>
+                  <div class="kpi__label">Mean Time to Resolve</div>
+                </div>
+              </div>
+              <span class="kpi__delta up">&darr; -24%</span>
+            </div>
+            <div class="kpi__spark">
+              <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="kpi-green-grad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--green-500)" stop-opacity="0.35"/>
+                    <stop offset="100%" stop-color="var(--green-500)" stop-opacity="0.0"/>
+                  </linearGradient>
+                </defs>
+                <path d="M0,18 Q40,24 80,16 T160,18 T200,8 L200,36 L0,36 Z" fill="url(#kpi-green-grad)"/>
+                <path d="M0,18 Q40,24 80,16 T160,18 T200,8" fill="none" stroke="var(--green-500)" stroke-width="2"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Resolved (7d) -->
+          <div class="kpi">
+            <div class="kpi__top">
+              <div class="kpi__left">
+                <div class="kpi__icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div>
+                  <div class="kpi__value" id="kpi-resolved-val">--</div>
+                  <div class="kpi__label">Resolved (7d)</div>
+                </div>
+              </div>
+              <span class="kpi__delta up">&check; Stable</span>
+            </div>
+            <div class="kpi__spark">
+              <svg viewBox="0 0 200 36" preserveAspectRatio="none">
+                <path d="M0,28 Q30,20 70,24 T130,16 T170,12 T200,8 L200,36 L0,36 Z" fill="url(#kpi-green-grad)"/>
+                <path d="M0,28 Q30,20 70,24 T130,16 T170,12 T200,8" fill="none" stroke="var(--green-500)" stroke-width="2"/>
+              </svg>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. Filter Bar Card -->
+        <div class="card" style="padding:16px 20px;">
+          <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center; justify-content:space-between;">
+            <!-- Search Input -->
+            <div style="flex:1; min-width:260px; position:relative;">
+              <svg style="position:absolute; left:12px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:var(--text-3);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input id="filter-search" type="text" class="input" placeholder="Search identity, case ID, session ID, or tactics..." style="padding-left:36px; width:100%;" />
+            </div>
+
+            <!-- Select Filters -->
+            <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+              <select id="filter-band" class="select" style="min-width:150px;">
+                <option value="all">All Severities</option>
+                <option value="revoke">Revoke (Critical ≥ 90)</option>
+                <option value="restrict">Restrict (High 70–89)</option>
+                <option value="step_up">Step-Up (Medium 50–69)</option>
+                <option value="monitor">Monitor (Low &lt; 50)</option>
+              </select>
+
+              <select id="filter-status" class="select" style="min-width:140px;">
+                <option value="all">All Statuses</option>
+                <option value="open">Open</option>
+                <option value="investigating">Investigating</option>
+                <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
+              </select>
+
+              <button id="btn-reset-filters" class="btn btn--ghost" type="button">
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Cases Table Card -->
+        <div class="card" style="padding:0; overflow:hidden;">
+          <div class="table-wrap">
+            <table class="table" id="cases-table">
+              <thead>
+                <tr>
+                  <th data-sort="case_id" style="cursor:pointer;">Case ID ↕</th>
+                  <th data-sort="identity_id" style="cursor:pointer;">User / Identity ↕</th>
+                  <th>Detection</th>
+                  <th data-sort="band" style="cursor:pointer;">Severity ↕</th>
+                  <th data-sort="risk_score" style="cursor:pointer; width:130px;">Risk Score ↕</th>
+                  <th data-sort="status" style="cursor:pointer;">Status ↕</th>
+                  <th data-sort="created_at" style="cursor:pointer; text-align:right;">Last Activity ↕</th>
+                </tr>
+              </thead>
+              <tbody id="cases-table-body">
+                <tr><td colspan="7"><div class="skeleton" style="height:38px; margin:6px 16px;"></div></td></tr>
+                <tr><td colspan="7"><div class="skeleton" style="height:38px; margin:6px 16px;"></div></td></tr>
+                <tr><td colspan="7"><div class="skeleton" style="height:38px; margin:6px 16px;"></div></td></tr>
+                <tr><td colspan="7"><div class="skeleton" style="height:38px; margin:6px 16px;"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- 5. Slide-Over Investigation Drawer -->
+  <div id="case-drawer" class="drawer">
+    <div style="padding:20px 24px; border-bottom:1px solid var(--border-1); display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div class="mono muted" style="font-size:11px; text-transform:uppercase; letter-spacing:0.04em;">Threat Case Quick View</div>
+        <div style="display:flex; align-items:center; gap:10px; margin-top:2px;">
+          <h3 id="drawer-case-id" class="mono" style="margin:0; font-size:16px; font-weight:700; color:var(--text-1);">case-id</h3>
+          <span id="drawer-risk-badge" class="badge--score">--</span>
+        </div>
+      </div>
+      <button id="drawer-close" class="btn btn--icon btn--ghost" type="button" title="Close">✕</button>
+    </div>
+
+    <div class="drawer__body" style="padding:20px 24px; overflow-y:auto; display:flex; flex-direction:column; gap:20px; flex:1;">
+      <!-- Compare Box: Previous vs Current Login -->
+      <div id="drawer-compare-box"></div>
+
+      <!-- Narrative Summary -->
+      <div>
+        <h4 class="mono muted" style="font-size:11px; text-transform:uppercase; margin:0 0 8px 0;">Case Summary &amp; Narrative</h4>
+        <div id="drawer-narrative-box" style="font-size:13px; line-height:1.6; color:var(--text-2); background:var(--surface-2); padding:14px; border-radius:var(--radius-md); border:1px solid var(--border-1);"></div>
+      </div>
+
+      <!-- Evidence & Attack Steps Timeline -->
+      <div>
+        <h4 class="mono muted" style="font-size:11px; text-transform:uppercase; margin:0 0 10px 0;">Evidence &amp; Attack Steps</h4>
+        <div id="drawer-timeline" style="display:flex; flex-direction:column; gap:12px;"></div>
+      </div>
+
+      <!-- Contributing Detectors -->
+      <div>
+        <h4 class="mono muted" style="font-size:11px; text-transform:uppercase; margin:0 0 8px 0;">Contributing Detectors</h4>
+        <div id="drawer-agents" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+      </div>
+
+      <!-- Drawer Action Buttons -->
+      <div style="margin-top:auto; padding-top:16px; border-top:1px solid var(--border-1); display:flex; gap:10px;">
+        <a id="drawer-full-link" href="#" class="btn btn--primary" style="flex:1; justify-content:center; text-decoration:none;">
+          Full Investigation &rarr;
+        </a>
+        <button id="drawer-resolve-btn" class="btn btn--ghost" type="button">Resolve Case</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="drawer-backdrop" class="modal-backdrop" style="display:none;"></div>
+
+  <!-- Scripts -->
+  <script src="/v3/assets/js/shell.js"></script>
+  <script type="module" src="/v3/js/pages/cases.js"></script>
+</body>
+</html>

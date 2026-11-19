@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IdentityShield · Audit Trail</title>
+
+  <!-- Google Fonts & Shared Theme Tokens (Phase 1) -->
+  <link rel="stylesheet" href="/v3/assets/css/theme.css">
+  <link rel="stylesheet" href="/v3/assets/css/shell.css">
+  <link rel="stylesheet" href="/v3/assets/css/components.css">
+
+  <!-- Core Theme Styles -->
+  <script>try{const t=localStorage.getItem('identityshield_theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+  <link rel="stylesheet" href="/v3/css/theme.css">
+  <link rel="stylesheet" href="/v3/css/motion.css">
+
+  <!-- Tailwind CSS -->
+  <link rel="stylesheet" href="/v3/css/tailwind.css">
+  <script src="/v3/assets/js/tailwind-theme.js"></script>
+</head>
+<body data-page="audit">
+
+  <aside id="is-sidebar"></aside>
+  <canvas id="bg3d-canvas" style="display:none;"></canvas>
+
+  <div class="is-main">
+    <header id="is-topbar"></header>
+
+    <main class="is-content">
+      <div id="main-content" style="display:flex; flex-direction:column; gap:24px; max-width:1600px; margin:0 auto; width:100%;">
+    
+        <!-- 1. Page Header Block & Verification Action -->
+        <div class="is-page-head" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px;">
+          <div>
+            <h1>Audit <span class="accent">Trail</span></h1>
+            <p>Tamper-evident, hash-chained ledger of security actions and governance decisions</p>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button id="btn-export-audit" class="btn btn--ghost" type="button" style="font-size:12px; padding:8px 14px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export CSV
+            </button>
+            <button id="btn-verify-audit" class="btn btn--primary" type="button" style="font-size:12px; padding:8px 16px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+              <span id="btn-verify-text">Verify Cryptographic Chain</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Verification Result Alert Banner -->
+        <div id="audit-verify-banner" class="card" style="display:none; padding:16px 20px; border-left:4px solid var(--green-500); align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span id="verify-banner-dot" class="pill__dot good" style="width:10px; height:10px;"></span>
+            <div>
+              <div id="verify-banner-title" style="font-size:14px; font-weight:700; color:var(--text-1);">Audit Chain Cryptographically Verified</div>
+              <div id="verify-banner-desc" style="font-size:12px; color:var(--text-3); font-family:var(--font-mono); margin-top:2px;">All SHA-256 blocks chained and unbroken across records.</div>
+            </div>
+          </div>
+          <span id="verify-banner-records" class="pill" style="font-size:11px;">
+            <span class="pill__dot good"></span> 48 Records Verified
+          </span>
+        </div>
+
+        <!-- 3. Filter Controls Bar -->
+        <div class="card" style="padding:16px 20px; display:flex; flex-wrap:wrap; gap:14px; align-items:center; justify-content:space-between;">
+          <div style="display:flex; gap:12px; flex:1; min-width:260px;">
+            <input id="filter-audit-search" class="input" type="text" placeholder="Search actor, target entity, or IP..." style="width:100%; font-size:12px;" />
+          </div>
+
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <select id="filter-audit-actor" class="select" style="font-size:12px; min-width:160px;">
+              <option value="all">All Actors</option>
+              <option value="Agent 14 (Response)">Agent 14 (Response)</option>
+              <option value="Agent 15 (Feedback &amp; Tuning)">Agent 15 (Feedback &amp; Tuning)</option>
+              <option value="sec-ops-lead">sec-ops-lead</option>
+            </select>
+
+            <select id="filter-audit-action" class="select" style="font-size:12px; min-width:140px;">
+              <option value="all">All Actions</option>
+              <option value="CONFIG">CONFIG</option>
+              <option value="CASE">CASE</option>
+              <option value="RESPONSE">RESPONSE</option>
+            </select>
+
+            <select id="filter-audit-date" class="select" style="font-size:12px; min-width:130px;">
+              <option value="all">All Time</option>
+              <option value="24h">Last 24 Hours</option>
+              <option value="7d">Last 7 Days</option>
+            </select>
+
+            <button id="btn-reset-audit-filters" class="btn btn--ghost" type="button" style="font-size:12px; padding:6px 14px;">Reset</button>
+          </div>
+        </div>
+
+        <!-- 4. Hash-Chained Audit Ledger Table -->
+        <div class="card" style="padding:0; overflow:hidden;">
+          <div class="table-wrapper">
+            <table id="audit-table" class="table">
+              <thead>
+                <tr>
+                  <th style="width:48px;">#</th>
+                  <th style="width:160px;">Timestamp</th>
+                  <th>Actor</th>
+                  <th style="width:110px;">Action</th>
+                  <th>Target Entity</th>
+                  <th style="width:130px;" class="mono">Source IP</th>
+                  <th style="width:140px;" class="mono">SHA-256 Block</th>
+                  <th style="width:80px; text-align:center;">Diff</th>
+                </tr>
+              </thead>
+              <tbody id="audit-table-body">
+                <tr><td colspan="8"><div class="skeleton" style="height:36px; margin:4px 12px;"></div></td></tr>
+                <tr><td colspan="8"><div class="skeleton" style="height:36px; margin:4px 12px;"></div></td></tr>
+                <tr><td colspan="8"><div class="skeleton" style="height:36px; margin:4px 12px;"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/v3/assets/js/shell.js"></script>
+  <script type="module" src="/v3/js/pages/audit.js"></script>
+</body>
+</html>

@@ -1,0 +1,588 @@
+/* =============================================================================
+   IdentityShield v3 — Agent Operations Center (SOC) Stylesheet
+   Source of Truth: DESIGN_SPEC.md & 07_PHASE_7_AGENT_OPERATIONS_CENTER.md
+   Zero raw hex colors — 100% token driven
+   ============================================================================= */
+
+/* --- 1. Pipeline Board Layout --- */
+.soc-pipeline-board {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  min-height: 480px;
+}
+
+@media (max-width: 1400px) {
+  .soc-pipeline-board {
+    overflow-x: auto;
+    grid-template-columns: repeat(5, minmax(240px, 1fr));
+    scroll-snap-type: x mandatory;
+    padding-bottom: 8px;
+  }
+  .soc-layer-col {
+    scroll-snap-align: start;
+  }
+}
+
+.soc-layer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  padding: 14px 12px;
+  position: relative;
+  z-index: 2;
+}
+
+.soc-layer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-1);
+}
+
+.soc-layer-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--green-400);
+}
+
+.soc-layer-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-top: 2px;
+}
+
+.soc-layer-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-3);
+  padding: 2px 6px;
+  background: var(--surface-2);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-1);
+}
+
+/* --- 2. Agent Card & Dynamic States --- */
+.soc-agent-card {
+  position: relative;
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color var(--dur-fast), background var(--dur-fast), box-shadow var(--dur-fast);
+}
+
+.soc-agent-card:hover {
+  border-color: var(--border-2);
+  background: var(--surface-3);
+}
+
+/* Card Header */
+.soc-agent-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.soc-agent-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.soc-agent-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--green-400);
+  flex-shrink: 0;
+}
+
+.soc-agent-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+
+.soc-agent-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
+.soc-agent-status-pill {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Current Active Check / Typed Line */
+.soc-agent-check-line {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-2);
+  min-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
+}
+
+.soc-agent-check-line.dim {
+  color: var(--text-3);
+}
+
+/* Progress bar inside card */
+.soc-agent-progress {
+  width: 100%;
+  height: 3px;
+  background: var(--surface-3);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  position: relative;
+}
+
+.soc-agent-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--green-500);
+  transition: width 0.15s ease;
+}
+
+/* Metrics Footer */
+.soc-agent-metrics {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-3);
+  padding-top: 4px;
+  border-top: 1px solid var(--border-1);
+}
+
+/* Mini sparkline canvas */
+.soc-agent-sparkline {
+  width: 50px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* --- 3. Dynamic State Modifiers --- */
+
+/* State: idle */
+.soc-agent-card[data-state="idle"] {
+  border-color: var(--border-1);
+}
+.soc-agent-card[data-state="idle"] .soc-agent-status-pill {
+  color: var(--text-3);
+  background: var(--surface-3);
+}
+
+/* State: receiving */
+.soc-agent-card[data-state="receiving"] {
+  border-color: var(--border-2);
+  background: var(--surface-3);
+}
+.soc-agent-card[data-state="receiving"] .soc-agent-status-pill {
+  color: var(--green-400);
+  background: rgba(0, 230, 118, 0.12);
+}
+
+/* State: scanning (green sweep line) */
+.soc-agent-card[data-state="scanning"] {
+  border-color: var(--green-500);
+  box-shadow: var(--green-glow);
+}
+.soc-agent-card[data-state="scanning"] .soc-agent-status-pill {
+  color: var(--green-400);
+  background: rgba(0, 230, 118, 0.15);
+}
+.soc-agent-card[data-state="scanning"]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--green-400);
+  box-shadow: 0 0 10px var(--green-400);
+  opacity: 0.6;
+  animation: soc-scan-sweep 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes soc-scan-sweep {
+  0% { transform: translateY(0); opacity: 0.8; }
+  50% { opacity: 0.4; }
+  100% { transform: translateY(110px); opacity: 0; }
+}
+
+/* State: analyzing */
+.soc-agent-card[data-state="analyzing"] {
+  border-color: var(--border-2);
+}
+.soc-agent-card[data-state="analyzing"] .soc-agent-status-pill {
+  color: var(--green-500);
+  background: rgba(0, 230, 118, 0.12);
+}
+
+/* State: pass */
+.soc-agent-card[data-state="pass"] {
+  border-color: var(--green-500);
+}
+.soc-agent-card[data-state="pass"] .soc-agent-status-pill {
+  color: var(--green-500);
+  background: rgba(0, 230, 118, 0.12);
+}
+
+/* State: warn */
+.soc-agent-card[data-state="warn"] {
+  border-color: var(--amber-500);
+  box-shadow: 0 0 16px rgba(245, 165, 36, 0.2);
+}
+.soc-agent-card[data-state="warn"] .soc-agent-status-pill {
+  color: var(--amber-500);
+  background: rgba(245, 165, 36, 0.15);
+}
+.soc-agent-card[data-state="warn"] .soc-agent-check-line {
+  color: var(--amber-500);
+}
+
+/* State: flagged (threat) */
+.soc-agent-card[data-state="flagged"] {
+  border-color: var(--red-500);
+  background: rgba(90, 16, 16, 0.25);
+  box-shadow: var(--red-glow);
+  animation: soc-threat-pulse 2s infinite ease-in-out;
+}
+.soc-agent-card[data-state="flagged"] .soc-agent-status-pill {
+  color: var(--red-500);
+  background: rgba(255, 59, 59, 0.2);
+}
+.soc-agent-card[data-state="flagged"] .soc-agent-check-line {
+  color: var(--red-500);
+  font-weight: 700;
+}
+
+@keyframes soc-threat-pulse {
+  0%, 100% { box-shadow: var(--red-glow); }
+  50% { box-shadow: 0 0 36px rgba(255, 59, 59, 0.45); }
+}
+
+/* State: blocked (containment response) */
+.soc-agent-card[data-state="blocked"] {
+  border-color: var(--red-500);
+  background: var(--red-700);
+}
+.soc-agent-card[data-state="blocked"] .soc-agent-status-pill {
+  color: var(--text-1);
+  background: var(--red-500);
+}
+
+/* State: degraded */
+.soc-agent-card[data-state="degraded"] {
+  border-color: var(--amber-500);
+}
+
+/* --- 4. SVG Overlay Connectors & Traveling Packets --- */
+.soc-connectors-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.soc-connector-path {
+  fill: none;
+  stroke: rgba(0, 230, 118, 0.18);
+  stroke-width: 1.5;
+  transition: stroke var(--dur-fast), stroke-width var(--dur-fast);
+}
+
+.soc-connector-path.active {
+  stroke: var(--green-400);
+  stroke-width: 2.2;
+}
+
+.soc-connector-path.trail-threat {
+  stroke: var(--red-500);
+  stroke-width: 2.5;
+  box-shadow: 0 0 10px var(--red-500);
+}
+
+/* Packet chip */
+.soc-packet-chip {
+  position: absolute;
+  z-index: 5;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  border: 1px solid var(--border-2);
+  color: var(--text-1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.soc-packet-chip.pass {
+  border-color: var(--green-500);
+  color: var(--green-400);
+}
+.soc-packet-chip.warn {
+  border-color: var(--amber-500);
+  color: var(--amber-500);
+}
+.soc-packet-chip.threat {
+  border-color: var(--red-500);
+  color: var(--red-500);
+  background: var(--surface-1);
+  box-shadow: var(--red-glow);
+}
+
+/* --- 5. Live Agent Console Terminal --- */
+.soc-console-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-0);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  height: 400px;
+}
+
+.soc-console-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border-1);
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.soc-console-viewport {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--bg-0);
+}
+
+.soc-console-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  color: var(--text-2);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: background var(--dur-fast);
+}
+
+.soc-console-line:hover {
+  background: var(--surface-2);
+}
+
+.soc-console-line .ts {
+  color: var(--text-3);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.soc-console-line .tag {
+  font-weight: 700;
+  color: var(--green-400);
+  flex-shrink: 0;
+  width: 140px;
+}
+
+.soc-console-line .msg {
+  flex: 1;
+  word-break: break-all;
+}
+
+.soc-console-line.pass .icon { color: var(--green-500); }
+.soc-console-line.warn {
+  color: var(--amber-500);
+  background: rgba(245, 165, 36, 0.08);
+}
+.soc-console-line.threat {
+  color: var(--red-500);
+  background: rgba(255, 59, 59, 0.12);
+  font-weight: 600;
+}
+.soc-console-line.supervisor {
+  background: rgba(0, 230, 118, 0.05);
+  border-left: 2px solid var(--green-400);
+}
+.soc-console-line.supervisor .tag {
+  color: var(--green-300);
+}
+
+/* --- 6. Event Trace & Verdict Panel --- */
+.soc-trace-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  gap: 14px;
+  overflow-y: auto;
+  height: 400px;
+}
+
+/* Risk Gauge: 10 Segmented Blocks */
+.soc-risk-gauge-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-sm);
+}
+
+.soc-risk-blocks {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  max-width: 220px;
+}
+
+.soc-risk-block {
+  flex: 1;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  transition: background var(--dur-fast);
+}
+
+.soc-risk-block.active-green { background: var(--green-500); }
+.soc-risk-block.active-amber { background: var(--amber-500); }
+.soc-risk-block.active-red { background: var(--red-500); box-shadow: 0 0 6px var(--red-500); }
+
+/* Checklist Item */
+.soc-trace-check-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+/* --- 7. Agent Health Matrix (Canvas) --- */
+.soc-matrix-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-1);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  gap: 10px;
+}
+
+.soc-matrix-canvas-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .soc-agent-card.scanning::after,
+  .soc-agent-card.flagged,
+  .soc-agent-card.warn,
+  .soc-packet-chip,
+  .soc-traveling-packet {
+    animation: none !important;
+    transition: none !important;
+  }
+  .soc-agent-card.scanning::after {
+    display: none !important;
+  }
+}
+
+/* 3D Connected Graph HUD Overlay Badges */
+.cyber-3d-hud-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  overflow: hidden;
+}
+
+.cyber-3d-agent-badge {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 20;
+  user-select: none;
+}
+
+.cyber-badge-inner {
+  background: rgba(7, 14, 10, 0.94);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.8);
+  transition: all 0.15s ease;
+}
+
+.cyber-badge-inner:hover {
+  border-color: var(--green-500);
+  box-shadow: 0 0 16px rgba(0, 230, 118, 0.5);
+  transform: scale(1.05);
+}

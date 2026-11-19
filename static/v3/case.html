@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IdentityShield · Case Investigation</title>
+
+  <!-- Google Fonts & Shared Theme Tokens (Phase 1) -->
+  <link rel="stylesheet" href="/v3/assets/css/theme.css">
+  <link rel="stylesheet" href="/v3/assets/css/shell.css">
+  <link rel="stylesheet" href="/v3/assets/css/components.css">
+
+  <!-- Core Theme Styles -->
+  <script>try{const t=localStorage.getItem('identityshield_theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+  <link rel="stylesheet" href="/v3/css/theme.css">
+  <link rel="stylesheet" href="/v3/css/motion.css">
+
+  <!-- Tailwind CSS -->
+  <link rel="stylesheet" href="/v3/css/tailwind.css">
+  <script src="/v3/assets/js/tailwind-theme.js"></script>
+</head>
+<body data-page="cases">
+
+  <aside id="is-sidebar"></aside>
+  <canvas id="bg3d-canvas" style="display:none;"></canvas>
+
+  <div class="is-main">
+    <header id="is-topbar"></header>
+
+    <main class="is-content">
+      <div id="main-content" style="display:flex; flex-direction:column; gap:20px; max-width:1600px; margin:0 auto; width:100%;">
+    
+        <!-- Top Nav Back Link & Actions -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <a href="/v3/cases.html" class="btn btn--ghost" style="padding:6px 12px; font-size:13px; text-decoration:none;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Back to All Cases
+          </a>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <!-- 30-Day Memory Secondary Button -->
+            <button id="btn-case-memory" class="btn btn--ghost" type="button" style="display:none; padding:5px 12px; font-size:12px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span id="btn-case-memory-text">30-Day Memory</span>
+              <span id="btn-case-memory-badge" class="badge info" style="display:none;"></span>
+            </button>
+            <span id="case-badge-band" class="badge high">RESTRICT</span>
+            <span id="case-badge-status" class="pill" style="height:28px;"><span class="pill__dot bad"></span> OPEN</span>
+          </div>
+        </div>
+
+        <!-- Case Header Card with SVG Arc Risk Gauge -->
+        <div class="card card--danger" style="padding:24px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:24px;">
+          <!-- Left: Identity, Session, Title -->
+          <div style="flex:1; min-width:320px;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+              <span id="case-id-tag" class="mono text-accent" style="font-size:13px; font-weight:700;">CASE-E1-SVCREPORT</span>
+              <span style="color:var(--border-2);">&bull;</span>
+              <span id="case-session-tag" class="mono muted" style="font-size:12px;">ses-okta-882194</span>
+            </div>
+            <h1 id="case-title" style="font-size:24px; font-weight:700; margin:0 0 8px 0; color:var(--text-1); letter-spacing:-0.02em;">
+              E1: Multi-Stage Privilege Escalation &amp; CloudTrail Tampering
+            </h1>
+            <p id="case-summary" style="font-size:14px; color:var(--text-2); margin:0; max-width:800px; line-height:1.6;">
+              Identity svc-report authenticated from Frankfurt (new country/ASN), assumed AWS SAML role, generated new access keys, attached AdministratorAccess, and executed StopLogging on AWS CloudTrail.
+            </p>
+          </div>
+
+          <!-- Right: Risk Gauge & Metric Indicators -->
+          <div style="display:flex; align-items:center; gap:28px;">
+            <!-- SVG Arc Risk Gauge -->
+            <div style="display:flex; flex-direction:column; align-items:center; position:relative; width:130px; height:105px;">
+              <svg viewBox="0 0 100 65" style="width:130px; height:85px; overflow:visible;">
+                <!-- Background Track -->
+                <path d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke="var(--surface-3)" stroke-width="8" stroke-linecap="round" />
+                <!-- Animated Value Arc -->
+                <path id="gauge-arc" d="M 10 55 A 40 40 0 0 1 90 55" fill="none" stroke="var(--red-500)" stroke-width="8" stroke-linecap="round"
+                      stroke-dasharray="126" stroke-dashoffset="12" style="transition:stroke-dashoffset 1s ease-out, stroke 0.5s ease; filter:drop-shadow(0 0 6px var(--red-500));" />
+              </svg>
+              <div style="position:absolute; bottom:18px; text-align:center;">
+                <div id="gauge-score" class="mono text-danger" style="font-size:26px; font-weight:800; line-height:1;">92.4</div>
+                <div class="mono muted" style="font-size:10px; text-transform:uppercase; letter-spacing:0.04em;">Session Risk</div>
+              </div>
+            </div>
+
+            <!-- Identity Risk & Confidence Stack -->
+            <div style="display:flex; flex-direction:column; gap:10px; border-left:1px solid var(--border-1); padding-left:20px;">
+              <div>
+                <div class="mono muted" style="font-size:11px; text-transform:uppercase;">Identity Risk</div>
+                <div id="metric-identity-risk" class="mono text-danger" style="font-size:20px; font-weight:700;">92.4</div>
+              </div>
+              <div>
+                <div class="mono muted" style="font-size:11px; text-transform:uppercase;">Confidence</div>
+                <div id="metric-confidence" class="mono text-accent" style="font-size:20px; font-weight:700;">94.0%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2-Column Investigation Grid -->
+        <div class="grid-2-1" style="align-items:start;">
+          <!-- Left Column: Attack Chain & Narrative -->
+          <div style="display:flex; flex-direction:column; gap:20px;">
+            <!-- Attack Chain Vertical Timeline -->
+            <div class="card">
+              <div class="card__head">
+                <h2 class="card__title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                  Attack Chain Timeline
+                </h2>
+                <span class="mono muted" style="font-size:12px;">Grouped by MITRE Kill-Chain</span>
+              </div>
+              <!-- Vertical Timeline Steps Container -->
+              <div id="attack-chain-container" style="display:flex; flex-direction:column; gap:16px; position:relative; padding-left:16px;">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- Investigation Narrative Card -->
+            <div class="card">
+              <div class="card__head">
+                <h3 class="card__title" style="font-size:16px;">Investigation Narrative</h3>
+                <span id="narrative-source-tag" class="badge info">[TEMPLATE NARRATIVE]</span>
+              </div>
+              <p id="narrative-text" style="font-size:14px; color:var(--text-2); line-height:1.65; margin:0;">
+                Loading case explanation...
+              </p>
+            </div>
+          </div>
+
+          <!-- Right Column: Evidence, Counterfactuals, Next Step, Actions -->
+          <div style="display:flex; flex-direction:column; gap:20px;">
+            <!-- Why this Score (Top 3 Reasons) -->
+            <div class="card">
+              <div class="card__head" style="margin-bottom:14px;">
+                <h3 class="card__title" style="font-size:15px;">Why This Score</h3>
+                <span class="mono muted" style="font-size:11px;">TOP EVIDENCE</span>
+              </div>
+              <div id="reasons-container" style="display:flex; flex-direction:column; gap:10px;">
+                <!-- Rendered dynamically with clickable evidence IDs -->
+              </div>
+            </div>
+
+            <!-- Counterfactuals ("What if" Bars) -->
+            <div class="card">
+              <div class="card__head" style="margin-bottom:14px;">
+                <h3 class="card__title" style="font-size:15px;">Counterfactual Analysis ("What If")</h3>
+                <span class="mono text-accent" style="font-size:11px;">FUSION DROPS</span>
+              </div>
+              <div id="counterfactuals-container" style="display:flex; flex-direction:column; gap:12px;">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- Predicted Next Step Card -->
+            <div class="card card--warn" style="border-left:4px solid var(--amber-500) !important;">
+              <div class="card__head" style="margin-bottom:8px;">
+                <h3 class="card__title text-warn" style="font-size:15px; display:flex; align-items:center; gap:8px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                  Predicted Next Step
+                </h3>
+                <span class="pill" style="height:24px; padding:0 8px;"><span class="pill__dot warn"></span> 84% PROBABILITY</span>
+              </div>
+              <div id="predicted-next-step" style="font-size:14px; color:var(--text-1); font-weight:600; margin-bottom:6px;">
+                SecretsManager:GetSecretValue or S3 Data Exfiltration within 15m
+              </div>
+              <div class="muted" style="font-size:12px;">
+                Markov sequence rarity model detects transition to confidential data discovery.
+              </div>
+            </div>
+
+            <!-- Blast Radius & Related Identities -->
+            <div class="card">
+              <h3 class="card__title" style="font-size:15px; margin-bottom:14px;">Blast Radius &amp; Pivots</h3>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+                <div style="padding:12px; background:var(--surface-2); border-radius:var(--radius-md); border:1px solid var(--border-1);">
+                  <div class="mono muted" style="font-size:11px; text-transform:uppercase;">Compromised Roles / Keys</div>
+                  <div id="blast-radius-count" class="mono" style="font-size:18px; font-weight:700; color:var(--text-1); margin-top:2px;">4 Entities</div>
+                </div>
+                <div style="padding:12px; background:var(--surface-2); border-radius:var(--radius-md); border:1px solid var(--border-1);">
+                  <div class="mono muted" style="font-size:11px; text-transform:uppercase;">Related Identities</div>
+                  <div id="related-identities-text" class="mono text-accent" style="font-size:18px; font-weight:700; margin-top:2px;">2 Linked</div>
+                </div>
+              </div>
+              <div id="blast-radius-list" style="display:flex; flex-wrap:wrap; gap:6px;">
+                <span class="badge info">ReportViewerRole</span>
+                <span class="badge info">AKIAIOSFODNN7EXAMPLE</span>
+                <span class="badge info">production-trail</span>
+              </div>
+            </div>
+
+            <!-- Actions Panel & Analyst Workflow -->
+            <div class="card">
+              <div class="card__head" style="margin-bottom:14px;">
+                <h3 class="card__title" style="font-size:15px;">Simulator Response Actions</h3>
+                <span class="mono muted" style="font-size:11px;">PLAYBOOK PB-01</span>
+              </div>
+              
+              <div id="actions-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">
+                <!-- Rendered dynamically -->
+              </div>
+
+              <!-- Analyst Ground Truth Labeling Buttons -->
+              <div style="border-top:1px solid var(--border-1); padding-top:14px;">
+                <div class="mono muted" style="font-size:11px; margin-bottom:10px; text-transform:uppercase;">
+                  Feedback Loop // Analyst Label
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button id="btn-label-tp" class="btn btn--primary" type="button" style="flex:1; min-width:90px; justify-content:center; font-size:12px;">
+                    TP (Threat)
+                  </button>
+                  <button id="btn-label-fp" class="btn btn--ghost" type="button" style="flex:1; min-width:90px; justify-content:center; font-size:12px;">
+                    FP (False Alarm)
+                  </button>
+                  <button id="btn-label-benign" class="btn btn--ghost" type="button" style="flex:1; min-width:90px; justify-content:center; font-size:12px;">
+                    Benign TP
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Slide-Out Evidence Drawer -->
+  <div id="evidence-drawer" class="drawer">
+    <div style="padding:20px 24px; border-bottom:1px solid var(--border-1); display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div class="mono text-accent" style="font-size:11px; text-transform:uppercase;">Audit Evidence Inspector</div>
+        <h3 id="drawer-event-id" class="mono" style="margin:2px 0 0 0; font-size:16px; color:var(--text-1);">evt-okta-882194</h3>
+      </div>
+      <button id="btn-close-drawer" class="btn btn--icon btn--ghost" type="button">
+        ✕
+      </button>
+    </div>
+    <div style="flex:1; overflow-y:auto; padding:20px;">
+      <pre id="drawer-event-json" style="margin:0; font-family:var(--font-mono); font-size:12px; color:var(--text-1); background:var(--surface-2); padding:16px; border-radius:var(--radius-md); border:1px solid var(--border-1); white-space:pre-wrap; word-break:break-all;"></pre>
+    </div>
+  </div>
+
+  <!-- Action Approval Modal -->
+  <div id="action-modal" class="modal-backdrop" style="display:none;">
+    <div class="modal">
+      <h3 id="modal-title" style="margin:0 0 8px 0; font-size:18px; font-weight:700; color:var(--text-1);">Confirm Response Action</h3>
+      <p id="modal-desc" style="font-size:14px; color:var(--text-2); margin:0 0 16px 0; line-height:1.5;">
+        You are about to enforce simulator revocation on this identity.
+      </p>
+      <div style="margin-bottom:18px;">
+        <label class="mono muted" style="display:block; font-size:11px; text-transform:uppercase; margin-bottom:6px;">Analyst Name / Reason</label>
+        <input id="modal-analyst-input" type="text" class="input" value="sec-ops-lead" style="width:100%;" />
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button id="modal-btn-cancel" class="btn btn--ghost" type="button">Cancel</button>
+        <button id="modal-btn-confirm" class="btn btn--danger" type="button">Enforce Action</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/v3/assets/js/shell.js"></script>
+  <script type="module" src="/v3/js/pages/case.js"></script>
+</body>
+</html>

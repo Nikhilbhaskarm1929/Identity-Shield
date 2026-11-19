@@ -42,7 +42,15 @@ jobs:
           V3_ENABLED: "true"
           INGEST_KEYS: "test-key-1:test_super_secret_signing_key_32bytes_long!"
         run: |
-          pytest tests/v3/ -v
+          python -m pytest tests/v3/ -v --tb=short -rA 2>&1 | tee test_results.log
+
+      - name: Report Test Results to Summary
+        if: always()
+        run: |
+          echo "## Pytest Run Summary" >> $GITHUB_STEP_SUMMARY
+          echo '```text' >> $GITHUB_STEP_SUMMARY
+          tail -n 80 test_results.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
   # -------------------------------------------------------------
   # Job 2: Build & Verify Docker Image (CI)

@@ -85,6 +85,12 @@ def list_inputs():
     return clean_json(inputs.list_inputs())
 
 
+@router.get("/inputs/history")
+def inputs_history():
+    from app.v3.api import get_inputs_history
+    return get_inputs_history()
+
+
 @router.post("/inputs/upload")
 def upload_input(body: UploadBody, request: Request):
     try:

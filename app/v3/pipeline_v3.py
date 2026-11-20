@@ -235,6 +235,7 @@ def run_dataset(
     input_only: bool = False,
     pace: float = 0.0,
     db_path: Path | str | None = None,
+    filename: str | None = None,
 ) -> dict[str, Any]:
     """Run an entire dataset replay through the 15-agent pipeline."""
     global _last_summary, _is_running
@@ -258,7 +259,7 @@ def run_dataset(
         if res:
             if message.topic == "signals" and isinstance(message.payload, Signal):
                 _persist_signal(adapter, message.payload, message.created_at)
-            elif message.topic == "events" and isinstance(message.payload, Event):
+            elif message.topic in ("events", "events.normalized", "events.enriched") and isinstance(message.payload, Event):
                 _persist_event(adapter, message.payload)
         return res
 
@@ -429,6 +430,7 @@ def run_dataset(
 
     summary = {
         "status": "completed",
+        "filename": filename or (file_paths[0].name if file_paths else "input_scan.json"),
         "verdict": verdict,
         "risk_score": risk_score,
         "risk_band": risk_band,

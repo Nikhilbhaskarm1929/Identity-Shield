@@ -120,6 +120,19 @@ const SCENARIOS = [
   }
 ];
 
+function formatFileSize(bytes) {
+  if (typeof fmt !== 'undefined' && typeof fmt.bytes === 'function') {
+    return fmt.bytes(bytes);
+  }
+  if (!bytes || isNaN(bytes)) return '0 B';
+  const num = Number(bytes);
+  if (num < 1024) return `${num} B`;
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(num) / Math.log(k));
+  return `${(num / Math.pow(k, i)).toFixed(1)} ${sizes[i] || 'B'}`;
+}
+
 export async function initInputPage() {
   setupDropzone();
   setupQuickSamples();
@@ -127,19 +140,24 @@ export async function initInputPage() {
   renderPresets();
   setupScanAction();
   setupOktaButtons();
+  await loadRecentHistory();
+
+  // Real-time polling every 10 seconds to keep activities up to date
+  setInterval(() => {
+    loadRecentHistory();
+  }, 10000);
+
+  // SSE event listeners for real-time push
+  window.addEventListener('is:action', () => loadRecentHistory());
+  window.addEventListener('is:case', () => loadRecentHistory());
+  window.addEventListener('is:trace', () => loadRecentHistory());
 }
 
 function setupDropzone() {
   const dropzone = document.getElementById('upload-dropzone');
   const fileInput = document.getElementById('file-upload-input');
   const chooseBtn = document.getElementById('btn-choose-file');
-  const fileLabel = document.getElementById('file-name-label');
-  const readyBanner = document.getElementById('file-ready-banner');
-  const bannerTitle = document.getElementById('banner-file-title');
-  const bannerSub = document.getElementById('banner-file-sub');
   const quickScanBtn = document.getElementById('btn-quick-scan');
-  const textarea = document.getElementById('input-json-editor');
-  const autoScanChk = document.getElementById('chk-auto-scan');
 
   if (!dropzone || !fileInput) return;
 
@@ -218,116 +236,124 @@ function setupDropzone() {
       if (scanBtn) scanBtn.click();
     });
   }
+}
 
-  function handleFile(file) {
-    if (!file) return;
-    currentFileName = file.name;
-    const sizeStr = fmt.bytes(file.size);
-    if (fileLabel) fileLabel.textContent = `${file.name} (${sizeStr})`;
+export function handleFile(file) {
+  if (!file) return;
+  currentFileName = file.name;
+  const sizeStr = formatFileSize(file.size);
+  const fileLabel = document.getElementById('file-name-label');
+  const textarea = document.getElementById('input-json-editor');
+  const readyBanner = document.getElementById('file-ready-banner');
+  const bannerTitle = document.getElementById('banner-file-title');
+  const bannerSub = document.getElementById('banner-file-sub');
+  const autoScanChk = document.getElementById('chk-auto-scan');
 
-    const reader = new FileReader();
-    reader.onerror = () => {
+  if (fileLabel) fileLabel.textContent = `${file.name} (${sizeStr})`;
+
+  const reader = new FileReader();
+  reader.onerror = () => {
+    window.dispatchEvent(
+      new CustomEvent('is:toast', {
+        detail: { message: `Failed to read file ${file.name}`, type: 'error' },
+      })
+    );
+  };
+  reader.onload = async (evt) => {
+    const rawText = String(evt.target?.result || '').trim();
+    if (!rawText) {
       window.dispatchEvent(
         new CustomEvent('is:toast', {
-          detail: { message: `Failed to read file ${file.name}`, type: 'error' },
+          detail: { message: `File ${file.name} is empty`, type: 'warn' },
         })
       );
-    };
-    reader.onload = async (evt) => {
-      const rawText = String(evt.target?.result || '').trim();
-      if (!rawText) {
-        window.dispatchEvent(
-          new CustomEvent('is:toast', {
-            detail: { message: `File ${file.name} is empty`, type: 'warn' },
-          })
-        );
-        return;
-      }
-      if (textarea) textarea.value = rawText;
+      return;
+    }
+    if (textarea) textarea.value = rawText;
 
-      // Count records intelligently across JSON, JSONL, and CSV
-      let recordCount = 1;
-      let parsedObjects = null;
-      try {
-        const parsed = JSON.parse(rawText);
-        if (Array.isArray(parsed)) {
-          recordCount = parsed.length;
-          parsedObjects = parsed;
-        } else if (parsed && typeof parsed === 'object') {
-          const recs = parsed.Records || parsed.records || parsed.events || parsed.items || parsed.data;
-          if (Array.isArray(recs)) {
-            recordCount = recs.length;
-            parsedObjects = recs;
-          } else {
-            recordCount = 1;
-            parsedObjects = [parsed];
-          }
+    // Count records intelligently across JSON, JSONL, and CSV
+    let recordCount = 1;
+    let parsedObjects = null;
+    try {
+      const parsed = JSON.parse(rawText);
+      if (Array.isArray(parsed)) {
+        recordCount = parsed.length;
+        parsedObjects = parsed;
+      } else if (parsed && typeof parsed === 'object') {
+        const recs = parsed.Records || parsed.records || parsed.events || parsed.items || parsed.data;
+        if (Array.isArray(recs)) {
+          recordCount = recs.length;
+          parsedObjects = recs;
+        } else {
+          recordCount = 1;
+          parsedObjects = [parsed];
         }
-      } catch {
-        const lines = rawText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-        const jsonlList = [];
-        for (const line of lines) {
-          if (line.startsWith('{') && line.endsWith('}')) {
-            try {
-              jsonlList.push(JSON.parse(line));
-            } catch {
-              break;
-            }
-          } else {
+      }
+    } catch {
+      const lines = rawText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+      const jsonlList = [];
+      for (const line of lines) {
+        if (line.startsWith('{') && line.endsWith('}')) {
+          try {
+            jsonlList.push(JSON.parse(line));
+          } catch {
             break;
           }
-        }
-        if (jsonlList.length > 0 && jsonlList.length === lines.length) {
-          recordCount = jsonlList.length;
-          parsedObjects = jsonlList;
-        } else if (rawText.includes(',') && lines.length > 1) {
-          recordCount = Math.max(1, lines.length - 1);
         } else {
-          recordCount = lines.length || 1;
+          break;
         }
       }
-
-      // If we parsed JSONL records into objects, update textarea with pretty JSON
-      if (parsedObjects && Array.isArray(parsedObjects) && (!rawText.startsWith('{') || rawText.includes('\n{'))) {
-        if (textarea) textarea.value = JSON.stringify({ records: parsedObjects }, null, 2);
+      if (jsonlList.length > 0 && jsonlList.length === lines.length) {
+        recordCount = jsonlList.length;
+        parsedObjects = jsonlList;
+      } else if (rawText.includes(',') && lines.length > 1) {
+        recordCount = Math.max(1, lines.length - 1);
+      } else {
+        recordCount = lines.length || 1;
       }
+    }
 
-      // Update ready banner
-      if (readyBanner && bannerTitle && bannerSub) {
-        bannerTitle.textContent = file.name;
-        bannerSub.textContent = `${recordCount} records loaded (${sizeStr}) • Ready to scan`;
-        readyBanner.style.display = 'flex';
-      }
+    // If we parsed JSONL records into objects, update textarea with pretty JSON
+    if (parsedObjects && Array.isArray(parsedObjects) && (!rawText.startsWith('{') || rawText.includes('\n{'))) {
+      if (textarea) textarea.value = JSON.stringify({ records: parsedObjects }, null, 2);
+    }
 
-      // Persist to backend immediately
-      try {
-        await api.post('/inputs/upload', { content: rawText, source: 'auto', filename: file.name }).catch(() => {
-          return fetch('/api/inputs/upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: rawText, source: 'auto', filename: file.name }),
-          });
+    // Update ready banner
+    if (readyBanner && bannerTitle && bannerSub) {
+      bannerTitle.textContent = file.name;
+      bannerSub.textContent = `${recordCount} records loaded (${sizeStr}) • Ready to scan`;
+      readyBanner.style.display = 'flex';
+    }
+
+    // Persist to backend immediately and record activity
+    try {
+      await api.post('/inputs/upload', { content: rawText, source: 'auto', filename: file.name }).catch(() => {
+        return fetch('/api/inputs/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: rawText, source: 'auto', filename: file.name }),
         });
-      } catch (err) {
-        console.warn('Backend upload notice:', err);
-      }
+      });
+      loadRecentHistory();
+    } catch (err) {
+      console.warn('Backend upload notice:', err);
+    }
 
-      window.dispatchEvent(
-        new CustomEvent('is:toast', {
-          detail: { message: `Loaded ${file.name} (${recordCount} records)`, type: 'success' },
-        })
-      );
+    window.dispatchEvent(
+      new CustomEvent('is:toast', {
+        detail: { message: `Loaded ${file.name} (${recordCount} records)`, type: 'success' },
+      })
+    );
 
-      // Auto-scan if enabled
-      if (autoScanChk && autoScanChk.checked) {
-        setTimeout(() => {
-          const scanBtn = document.getElementById('btn-scan-input');
-          if (scanBtn) scanBtn.click();
-        }, 300);
-      }
-    };
-    reader.readAsText(file);
-  }
+    // Auto-scan if enabled
+    if (autoScanChk && autoScanChk.checked) {
+      setTimeout(() => {
+        const scanBtn = document.getElementById('btn-scan-input');
+        if (scanBtn) scanBtn.click();
+      }, 300);
+    }
+  };
+  reader.readAsText(file);
 }
 
 function setupQuickSamples() {
@@ -448,6 +474,32 @@ function setupEditor() {
       if (results) results.style.display = 'none';
     });
   }
+
+  // Allow direct drag-and-drop into the editor textarea
+  if (textarea) {
+    textarea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      textarea.style.borderColor = 'var(--green-500)';
+      textarea.style.boxShadow = '0 0 12px rgba(0, 230, 118, 0.25)';
+    });
+
+    textarea.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      textarea.style.borderColor = '';
+      textarea.style.boxShadow = '';
+    });
+
+    textarea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      textarea.style.borderColor = '';
+      textarea.style.boxShadow = '';
+      const file = e.dataTransfer?.files?.[0];
+      if (file) handleFile(file);
+    });
+  }
 }
 
 function renderPresets() {
@@ -538,10 +590,9 @@ function setupScanAction() {
     btn.disabled = true;
     btn.innerHTML = '<span class="status-dot warn"></span> Scanning...';
 
-    // Show progress stages
+    // Show progress stages cleanly right below the editor without viewport jump
     if (progressCard) {
       progressCard.style.display = 'flex';
-      progressCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     if (resultsContainer) resultsContainer.style.display = 'none';
 
@@ -565,6 +616,9 @@ function setupScanAction() {
       let payload;
       try {
         payload = JSON.parse(raw);
+        if (typeof payload === 'object' && payload !== null && !payload.filename) {
+          payload.filename = currentFileName;
+        }
       } catch {
         const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
         const jsonlList = [];
@@ -600,11 +654,16 @@ function setupScanAction() {
       if (resultsContainer) {
         resultsContainer.style.display = 'flex';
         renderScanResults(resultsContainer, resp);
-        resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Gentle alignment only if results extend below the viewport fold
+        const rect = resultsContainer.getBoundingClientRect();
+        if (rect.top > window.innerHeight - 80) {
+          resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
       }
 
-      // Add to recent ingests audit table
+      // Add to recent ingests audit table & refresh real-time activity log
       appendAuditRow(currentFileName, resp);
+      await loadRecentHistory();
 
     } catch (err) {
       window.dispatchEvent(
@@ -751,18 +810,63 @@ function appendAuditRow(filename, resp) {
   const tbody = document.getElementById('recent-ingests-body');
   if (!tbody) return;
 
-  const count = resp.events_count ?? resp.events ?? 18;
+  const count = resp.events_count ?? resp.events ?? 1;
   const now = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+  const durationMs = resp.duration_ms ? `${Math.round(resp.duration_ms)}ms` : '< 0.1s';
+  const isThreat = Boolean(resp.verdict === 'threat_detected' || (resp.cases_count && resp.cases_count > 0) || (resp.risk_score && resp.risk_score >= 50));
+  const badgeClass = isThreat ? 'high' : 'low';
+  const badgeText = isThreat ? 'ATTACK DETECTED' : 'PROCESSED';
 
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td class="mono" style="color:var(--text-1); font-weight:700;">${escHtml(filename)}</td>
+    <td class="mono" style="color:var(--text-1); font-weight:700;">
+      ${isThreat ? '⚠️ ' : '📄 '} ${escHtml(filename)}
+    </td>
     <td class="num mono">${count}</td>
-    <td class="num mono text-dim">&lt; 0.1s</td>
-    <td><span class="badge high mono">PROCESSED</span></td>
+    <td class="num mono text-dim">${escHtml(durationMs)}</td>
+    <td><span class="badge ${badgeClass} mono">${badgeText}</span></td>
     <td class="mono muted" style="font-size:11px;">${now}</td>
   `;
   tbody.insertBefore(tr, tbody.firstChild);
+}
+
+export async function loadRecentHistory() {
+  const tbody = document.getElementById('recent-ingests-body');
+  if (!tbody) return;
+
+  try {
+    const list = await api.get('/inputs/history').catch(async () => {
+      const res = await fetch('/api/inputs/history');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    });
+
+    if (Array.isArray(list) && list.length > 0) {
+      tbody.innerHTML = list.map((item) => {
+        const isThreat = Boolean(item.is_threat || item.status === 'ATTACK DETECTED' || (item.risk_score && item.risk_score >= 50));
+        const badgeClass = isThreat ? 'high' : (item.status === 'UPLOADED' ? 'medium' : 'low');
+        const badgeText = item.status || (isThreat ? 'ATTACK DETECTED' : 'PROCESSED');
+        const filename = item.filename || 'input_payload.json';
+        const events = typeof fmt?.number === 'function' ? fmt.number(item.events) : (item.events ?? 0);
+        const duration = item.duration || '< 0.1s';
+        const ts = item.timestamp || '—';
+
+        return `
+          <tr>
+            <td class="mono" style="color:var(--text-1); font-weight:700;">
+              ${isThreat ? '⚠️ ' : '📄 '} ${escHtml(filename)}
+            </td>
+            <td class="num mono">${escHtml(events)}</td>
+            <td class="num mono text-dim">${escHtml(duration)}</td>
+            <td><span class="badge ${badgeClass} mono">${escHtml(badgeText)}</span></td>
+            <td class="mono muted" style="font-size:11px;">${escHtml(ts)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+  } catch (err) {
+    console.warn('Failed to load recent activity history:', err);
+  }
 }
 
 // Auto-run

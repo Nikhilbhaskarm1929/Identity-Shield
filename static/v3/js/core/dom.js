@@ -125,6 +125,21 @@ export const fmt = {
   },
 
   /**
+   * Formats file size in bytes to human-readable string (e.g. "120 B", "14.2 KB", "1.5 MB")
+   */
+  bytes(val, decimals = 1) {
+    if (val === null || val === undefined || isNaN(val)) return '0 B';
+    const num = Number(val);
+    if (num <= 0) return '0 B';
+    if (num < 1024) return `${Math.round(num)} B`;
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(num) / Math.log(k));
+    const formatted = parseFloat((num / Math.pow(k, i)).toFixed(decimals));
+    return `${formatted} ${sizes[i] || 'B'}`;
+  },
+
+  /**
    * Short ISO date string (YYYY-MM-DD HH:MM:SS UTC)
    */
   date(timestamp) {
